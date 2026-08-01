@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
     <title>FaceInsight AI</title>
 </head>
+
 <body>
     <header>
         <nav class="navbar">
@@ -22,120 +24,160 @@
     </header>
     <main>
         <section id="home" class="hero">
-          <div class="hero-content">
-            <h1>Unlock Your Best Potential With AI</h1>
-            <p>Upload a photo and let AI analyze your facial features, estimate your facial metrics, and receive personalized glow-up recommendations to improve your appearance.</p>
-            <div class="hero-buttons">
-            <button class="primary-btn">Scan your face now!</button>
-            <button class="secondary-btn">Lets see how it works</button>
-          </div>
-          </div>
-          
-          <div class="hero-image">
-
-            <div class="ai-card">
-                <div class="card-header">
-                    <h3>🤖 FaceInsight AI</h3>
-                     <p>AI Face Analysis Preview</p>
+            <div class="hero-content">
+                <h1>Unlock Your Best Potential With AI</h1>
+                <p>Upload a photo and let AI analyze your facial features, estimate your facial metrics, and receive
+                    personalized glow-up recommendations to improve your appearance.</p>
+                <div class="hero-buttons">
+                    <button class="primary-btn">Scan your face now!</button>
+                    <button class="secondary-btn">Lets see how it works</button>
                 </div>
-
-                <div class="score-box">
-                    <h2>91</h2>
-                    <span>Face Score</span>
-                </div>
-
-                <div class="metrics">
-
-                    <div class="metric">
-                        <span>Tier</span>
-                        <strong>Chadlite</strong>
-                    </div>
-
-                    <div class="metric">
-                        <span>Symmetry</span>
-                        <strong>93%</strong>
-                    </div>
-
-                    <div class="metric">
-                        <span>Jawline</span>
-                        <strong>89%</strong>
-                    </div>
-
-                    <div class="metric">
-                        <span>Skin</span>
-                        <strong>94%</strong>
-                    </div>
-
-                </div>
-
-                <div class="status">
-                    <div class="loading-bar"></div>
-                    <p>AI Analyzing...</p>
-                </div>
-                
             </div>
 
-          </div>
+            <div class="hero-image">
 
-          </div>
+                <div class="ai-card">
+                    <div class="card-header">
+                        <h3>🤖 FaceInsight AI</h3>
+                        <p>AI Face Analysis Preview</p>
+                    </div>
+
+                    <div class="score-box">
+                        <h2>91</h2>
+                        <span>Face Score</span>
+                    </div>
+
+                    <div class="metrics">
+
+                        <div class="metric">
+                            <span>Tier</span>
+                            <strong>Chadlite</strong>
+                        </div>
+
+                        <div class="metric">
+                            <span>Symmetry</span>
+                            <strong>93%</strong>
+                        </div>
+
+                        <div class="metric">
+                            <span>Jawline</span>
+                            <strong>89%</strong>
+                        </div>
+
+                        <div class="metric">
+                            <span>Skin</span>
+                            <strong>94%</strong>
+                        </div>
+
+                    </div>
+
+                    <div class="status">
+                        <div class="loading-bar"></div>
+                        <p>AI Analyzing...</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            </div>
+
+
 
         </section>
         <section id="features" class="features">
 
-    <div class="section-title">
+            <div class="section-title">
 
-        <h2>Why FaceInsight AI?</h2>
+                <h2>Why FaceInsight AI?</h2>
 
-        <p>
-            Advanced AI-powered facial analysis designed to provide personalized
-            insights and glow-up recommendations.
-        </p>
+                <p>
+                    Advanced AI-powered facial analysis designed to provide personalized
+                    insights and glow-up recommendations.
+                </p>
 
-    </div>
+            </div>
 
-    <div class="feature-grid">
+            <div class="feature-grid">
 
-        <div class="feature-card">
+                <div class="feature-card">
 
-            <div class="icon">📷</div>
+                    <div class="icon">📷</div>
 
-            <h3>Face Scanner</h3>
+                    <h3>Face Scanner</h3>
 
-            <p>
-                Upload your photo and let AI detect facial landmarks.
-            </p>
+                    <p>
+                        Upload your photo and let AI detect facial landmarks.
+                    </p>
 
-        </div>
+                </div>
 
-        <div class="feature-card">
+                <div class="feature-card">
 
-            <div class="icon">🤖</div>
+                    <div class="icon">🤖</div>
 
-            <h3>AI Analysis</h3>
+                    <h3>AI Analysis</h3>
 
-            <p>
-                Analyze facial harmony, symmetry, jawline and skin quality.
-            </p>
+                    <p>
+                        Analyze facial harmony, symmetry, jawline and skin quality.
+                    </p>
 
-        </div>
+                </div>
 
-        <div class="feature-card">
+                <div class="feature-card">
 
-            <div class="icon">✨</div>
+                    <div class="icon">✨</div>
 
-            <h3>Glow Up Tips</h3>
+                    <h3>Glow Up Tips</h3>
 
-            <p>
-                Receive personalized recommendations to improve your appearance.
-            </p>
+                    <p>
+                        Receive personalized recommendations to improve your appearance.
+                    </p>
 
-        </div>
+                </div>
 
-    </div>
+            </div>
 
-</section>
+        </section>
+        <section class="scanner" id="scanner">
+            <div class="section-title">
+                <h2>Start Your Face Analysis</h2>
+
+                <p>
+                    Upload a clear front-facing photo and let FaceInsight AI
+                    analyze your facial features.
+                </p>
+            </div>
+            <div class="upload-container">
+
+                <label for="imageInput" class="upload-box">
+
+                    <input type="file" id="imageInput">
+
+                    <img id="preview" src="" alt="Preview">
+
+                    <div class="hide-content">
+
+                        <p class="upload-icon">📷</p>
+
+                        <h3 class="upload-title">
+                            Drag & Drop Your Image
+                        </h3>
+
+                        <p class="upload-text">
+                            or click to browse
+                        </p>
+
+                    </div>
+
+                </label>
+
+            </div>
+
+        </section>
     </main>
 
-    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
 </body>
+
 </html>
