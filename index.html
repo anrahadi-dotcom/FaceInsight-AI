@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href= "css/responsive.css">
     <title>FaceInsight AI</title>
 </head>
 
@@ -29,8 +30,8 @@
                 <p>Upload a photo and let AI analyze your facial features, estimate your facial metrics, and receive
                     personalized glow-up recommendations to improve your appearance.</p>
                 <div class="hero-buttons">
-                    <button class="primary-btn">Scan your face now!</button>
-                    <button class="secondary-btn">Lets see how it works</button>
+                    <button class="primary-btn"><a href="#scanner">Scan your face now!</a></button>
+                    <button class="secondary-btn"><a href="#about">Lets see how it works</a></button>
                 </div>
             </div>
 
@@ -87,7 +88,7 @@
         </section>
         <section id="features" class="features">
 
-            <div class="section-title">
+            <div class="section-title fade-up">
 
                 <h2>Why FaceInsight AI?</h2>
 
@@ -100,7 +101,7 @@
 
             <div class="feature-grid">
 
-                <div class="feature-card">
+                <div class="feature-card fade-up">
 
                     <div class="icon">📷</div>
 
@@ -112,7 +113,7 @@
 
                 </div>
 
-                <div class="feature-card">
+                <div class="feature-card fade-up">
 
                     <div class="icon">🤖</div>
 
@@ -124,7 +125,7 @@
 
                 </div>
 
-                <div class="feature-card">
+                <div class="feature-card fade-up">
 
                     <div class="icon">✨</div>
 
@@ -139,18 +140,136 @@
             </div>
 
         </section>
+        <section class="how-it-works" id="about">
+
+            <h2>How It Works</h2>
+
+            <p>
+                Analyze your face in three simple steps.
+            </p>
+
+            <div class="steps">
+
+                <div class="step">
+
+                    <div class="step-number">1</div>
+
+                    <div class="step-icon">📤</div>
+
+                    <h3>Upload Photo</h3>
+
+                    <p>
+                        Upload a clear front-facing image.
+                    </p>
+
+                </div>
+
+                <div class="line"></div>
+
+                <div class="step">
+
+                    <div class="step-number">2</div>
+
+                    <div class="step-icon">🤖</div>
+
+                    <h3>AI Analysis</h3>
+
+                    <p>
+                        Our AI detects facial landmarks and symmetry.
+                    </p>
+
+                </div>
+
+                <div class="line"></div>
+
+                <div class="step">
+
+                    <div class="step-number">3</div>
+
+                    <div class="step-icon">📊</div>
+
+                    <h3>Get Report</h3>
+
+                    <p>
+                        Receive your facial analysis instantly.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+        <section class="advanced-report">
+
+            <h2>Advanced Face Analysis</h2>
+
+            <div class="analysis-card">
+
+                <div class="analysis-score">
+
+                    <h3>Overall Score</h3>
+
+                    <span id="overall-score">9.4 / 10</span>
+
+                </div>
+
+                <div class="analysis-grid">
+
+                    <div>
+                        <h4>Face Shape</h4>
+                        <p>Oval</p>
+                    </div>
+
+                    <div>
+                        <h4>Harmony</h4>
+                        <p>91%</p>
+                    </div>
+
+                    <div>
+                        <h4>Symmetry</h4>
+                        <p>94%</p>
+                    </div>
+
+                    <div>
+                        <h4>Jawline</h4>
+                        <p>Strong</p>
+                    </div>
+
+                    <div>
+                        <h4>Canthal Tilt</h4>
+                        <p>Positive</p>
+                    </div>
+
+                    <div>
+                        <h4>Skin Quality</h4>
+                        <p>87%</p>
+                    </div>
+
+                </div>
+
+                <div class="verdict">
+
+                    <h3>AI Verdict</h3>
+
+                    <span class="tier">🟢 Adam Tier</span>
+
+                </div>
+
+            </div>
+
+        </section>
         <section class="scanner" id="scanner">
             <div class="section-title">
-                <h2>Start Your Face Analysis</h2>
+                <h2 class="fade-up">Start Your Face Analysis</h2>
 
-                <p>
+                <p class="fade-up">
                     Upload a clear front-facing photo and let FaceInsight AI
                     analyze your facial features.
                 </p>
             </div>
             <div class="upload-container">
 
-                <label for="imageInput" class="upload-box">
+                <label for="imageInput" class="upload-box fade-up">
 
                     <input type="file" id="imageInput">
 
@@ -176,7 +295,7 @@
 
                 </label>
                 <div id="loading">
-                    
+
 
                     <div class="loading-bar">
 
@@ -191,7 +310,91 @@
             </div>
 
         </section>
+        <section class="faq" id="faq">
+
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+
+                <button class="faq-question">
+
+                    Is my photo stored?
+
+                    <span>+</span>
+                </button>
+
+                <div class="faq-answer">
+
+                    <p>
+                        No. Your uploaded image is only used for analysis and is not permanently stored.
+                    </p>
+
+                </div>
+
+            </div>
+
+            <div class="faq-item">
+
+                <button class="faq-question">
+
+                    How accurate is the AI analysis?
+
+                    <span>+</span>
+
+                </button>
+
+                <div class="faq-answer">
+
+                    <p>
+                        This demo provides simulated results for educational and portofolio purposes.
+                    </p>
+
+                </div>
+                
+            </div>
+            
+        </section>
     </main>
+    <footer class="footer">
+
+        <div class="footer-container">
+
+            <div class="footer-logo">
+
+                <h2>FaceInsight AI</h2>
+
+                <p>
+                    AI-powered facial analysis designed for educational and portofolio purposes
+                </p>
+            </div>
+
+            <div class="footer-links">
+
+                <h3>Quick Links</h3>
+
+                <a href="#home">Home</a>
+                <a href="#features">Features</a>
+                <a href="how-it-works">How it Works</a>
+                <a href="#faq">FAQ</a>
+
+            </div>
+
+            <div class="footer-contact">
+
+                <h3>Contact</h3>
+
+                <p>📧 anrahadi02@gmail.com</p>
+                <p>💻 github.com/anrahadi-dotcom</p>
+            </div>
+
+        </div>
+
+        <hr>
+
+        <p class="copyright">
+             © 2026 FaceInsight AI. Built with ❤️ using HTML, CSS & JavaScript.
+        </p>
+    </footer>
 
     <script src="js/main.js"></script>
 </body>

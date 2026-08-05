@@ -7,7 +7,10 @@ const analyzeBtn = document.getElementById("analyze-btn")
 const loading = document.getElementById("loading");
 const progress = document.querySelector(".progress");
 const loadingText = document.getElementById("loading-text");
-
+const fadeElements = document.querySelectorAll(".fade-up");
+const overallScore = document.getElementById("overall-score");
+const reportSection = document.querySelector(".advanced-report");
+const questions = document.querySelectorAll(".faq-question");
 
 imageInput.addEventListener("change", function(){
 
@@ -95,5 +98,67 @@ analyzeBtn.addEventListener("click", function(){
  
 
 });
+
+window.addEventListener("load", function(){
+    
+    fadeElements.forEach(function(element, index){
+
+        setTimeout(function(){
+
+            element.classList.add("show");
+
+        }, index * 250);
+
+    });
+});
+
+
+function startCounter(){
+
+    let score = 0;
+
+    const scoreInterval = setInterval(function(){
+
+    score += 0.1;
+
+    overallScore.textContent = score.toFixed(1) + " / 10";
+
+    if(score >= 9.4){
+
+        clearInterval(scoreInterval);
+        overallScore.textContent = "9.4 / 10";
+
+    }
+
+},30);
+}
+
+const observer = new IntersectionObserver(function(entries){
+
+    if(entries[0].isIntersecting){
+
+        startCounter();
+        observer.disconnect();
+    }
+});
+
+observer.observe(reportSection);
+
+questions.forEach(function(question){
+
+    question.addEventListener("click",function(){
+
+        const answer = this.nextElementSibling;
+
+        if(answer.style.maxHeight){
+            
+            answer.style.maxHeight = null;
+        }else{
+
+            answer.style.maxHeight =
+            answer.scrollHeight + "px";
+        }
+    })
+})
 
 
