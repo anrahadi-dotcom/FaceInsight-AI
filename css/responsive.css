@@ -70,7 +70,6 @@
     flex: none;
     display: flex;
     align-items: center;
-    outline: 2px solid red;
   }
 
   body {
@@ -109,12 +108,12 @@
 
   * {
     box-sizing: border-box;
-    outline: 1px solid red;
+
   }
 
   .btn-scan {
     width: fit-content;
-    outline:1px solid red;
+
   }
 
   .hero > *{
@@ -123,6 +122,10 @@
 
 .nav-links a{
   font-size: 15px;
+}
+
+.footer{
+  text-align: center;
 }
 
 }
