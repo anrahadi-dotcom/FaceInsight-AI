@@ -30,13 +30,31 @@ imageInput.addEventListener("change", function(){
 
 });
 
-analyzeBtn.addEventListener("click", function(){
+function fileToDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+
+        reader.readAsDataURL(file);
+    });
+}
+
+analyzeBtn.addEventListener("click", async function(){
     const loading = document.getElementById("loading");
+    const file = imageInput.files[0];
+
+    if (!file){
+        return;
+    }
 
     loading.style.display = "block";
     
     analyzeBtn.disabled = true;
     analyzeBtn.textContent = "analyzing...";
+
+    const imageData = await fileToDataURL(file);
 
     let percent = 0;
 
@@ -49,11 +67,27 @@ analyzeBtn.addEventListener("click", function(){
         loadingText.textContent = percent + "%";
 
         
-        if (percent >=100){
+        if (percent >= 100) {
 
             clearInterval(interval);
 
-            setTimeout(function(){
+            setTimeout(async function() {
+
+            
+                try {
+
+                    const imageData = await fileToDataURL(file);
+
+                    const result = await analyzeImage(imageData);
+
+                    console.log("AI RESULT:", result);
+
+                } catch (error) {
+
+                    console.error("AI ERROR:", error);
+
+                }
+
 
                 loading.style.display = "none";
 
@@ -72,32 +106,40 @@ analyzeBtn.addEventListener("click", function(){
 
                 imageInput.value = "";
 
-                analyzeBtn.textContent = "Analyze My Face"
+                analyzeBtn.textContent = "Analyze My Face";
 
             }, 1500);
 
-            loadingText.textContent = "✅ Analysis Complete!";
 
-            analyzeBtn.disabled = false;
-        }else if(percent <20){
+        } else if (percent < 20) {
 
-            loadingText.textContent = "📷 Reading image..." + percent + "%";
-        }else if(percent >25){
+            loadingText.textContent =
+                "📷 Reading image... " + percent + "%";
 
-            loadingText.textContent = "🔍 Detecting facial landmarks..." + percent + "%";
-        }else if(percent <45){
 
-            loadingText.textContent = "📐 Measuring facial symmetry..." + percent + "%";
-        }else if(percent >75){
+        } else if (percent < 45) {
 
-            loadingText.textContent = "🧠 Generating AI report..."; + percent + "%";
+            loadingText.textContent =
+                "🔍 Detecting facial landmarks... " + percent + "%";
+
+
+        } else if (percent < 75) {
+
+            loadingText.textContent =
+                "📐 Measuring facial symmetry... " + percent + "%";
+
+
+        } else {
+
+            loadingText.textContent =
+                "🧠 Generating AI report... " + percent + "%";
+
         }
 
-    },40);
-
- 
+    }, 40);
 
 });
+
 
 window.addEventListener("load", function(){
     
@@ -160,5 +202,16 @@ questions.forEach(function(question){
         }
     })
 })
+
+function fileToDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+
+        reader.readAsDataURL(file);
+    });
+}
 
 
