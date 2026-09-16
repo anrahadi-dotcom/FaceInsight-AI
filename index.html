@@ -309,6 +309,36 @@
 
                 </div>
 
+                <p id="scan-status" class="scan-status"></p>
+
+                <div id="scanResults" class="scan-results hidden">
+
+                    <div class="scan-card scan-card-highlight">
+                        <h4>Your Overall Score</h4>
+                        <div id="scanOverallScore" class="scan-score">--</div>
+                        <span id="scanTier" class="tier"></span>
+                        <div id="scanOverallScale" class="scale-mount scale-mount-big"></div>
+                    </div>
+
+                    <div class="scan-grid">
+                        <div class="scan-card">
+                            <h4>Symmetry</h4>
+                            <div id="scanSymmetryScore" class="scan-score-sm">--</div>
+                            <div id="scanSymmetryScale" class="scale-mount"></div>
+                        </div>
+                        <div class="scan-card">
+                            <h4>Golden Ratio</h4>
+                            <div id="scanGoldenScore" class="scan-score-sm">--</div>
+                            <div id="scanGoldenScale" class="scale-mount"></div>
+                        </div>
+                    </div>
+
+                    <p class="scan-disclaimer">
+                        Computed live from your face's landmarks, on-device (nothing is uploaded).
+                        Geometry-based fun scores, not a medical or scientific attractiveness measurement.
+                    </p>
+                </div>
+
             </div>
 
         </section>
@@ -348,7 +378,10 @@
                 <div class="faq-answer">
 
                     <p>
-                        This demo provides simulated results for educational and portofolio purposes.
+                        The scanner below runs real, on-device facial landmark detection
+                        (Google's MediaPipe) to compute your face's symmetry and golden-ratio
+                        proportions — nothing is uploaded. These are geometric estimates for fun,
+                        not a medical or scientific measurement of attractiveness.
                     </p>
 
                 </div>
@@ -398,7 +431,7 @@
         </p>
     </footer>
     <script src="js/ai.js"></script>
-    <script src="js/main.js"></script>
+    <script type="module" src="js/main.js"></script>
     
 </body>
 

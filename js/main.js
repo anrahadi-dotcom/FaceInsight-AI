@@ -1,3 +1,6 @@
+import { analyzeFace, tierFor } from "./faceEngine.js";
+import { createScale, setScaleValue } from "./scale.js";
+
 const imageInput = document.getElementById("imageInput");
 const preview = document.getElementById("preview");
 const uploadIcon = document.querySelector(".upload-icon");
@@ -11,6 +14,24 @@ const fadeElements = document.querySelectorAll(".fade-up");
 const overallScore = document.getElementById("overall-score");
 const reportSection = document.querySelector(".advanced-report");
 const questions = document.querySelectorAll(".faq-question");
+
+const scanStatus = document.getElementById("scan-status");
+const scanResults = document.getElementById("scanResults");
+const scanOverallScoreEl = document.getElementById("scanOverallScore");
+const scanTierEl = document.getElementById("scanTier");
+const scanSymmetryScoreEl = document.getElementById("scanSymmetryScore");
+const scanGoldenScoreEl = document.getElementById("scanGoldenScore");
+
+const scanOverallMarker = createScale(document.getElementById("scanOverallScale"), {
+  withTicks: true,
+  tierForFn: tierFor,
+});
+const scanSymmetryMarker = createScale(document.getElementById("scanSymmetryScale"), {
+  tierForFn: tierFor,
+});
+const scanGoldenMarker = createScale(document.getElementById("scanGoldenScale"), {
+  tierForFn: tierFor,
+});
 
 imageInput.addEventListener("change", function(){
 
@@ -26,20 +47,12 @@ imageInput.addEventListener("change", function(){
     uploadTitle.style.display = "none";
     uploadText.style.display = "none";
 
+    scanResults.classList.add("hidden");
+    scanStatus.textContent = "";
+
     }
 
 });
-
-function fileToDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-
-        reader.readAsDataURL(file);
-    });
-}
 
 analyzeBtn.addEventListener("click", async function(){
     const loading = document.getElementById("loading");
@@ -53,8 +66,6 @@ analyzeBtn.addEventListener("click", async function(){
     
     analyzeBtn.disabled = true;
     analyzeBtn.textContent = "analyzing...";
-
-    const imageData = await fileToDataURL(file);
 
     let percent = 0;
 
@@ -73,18 +84,22 @@ analyzeBtn.addEventListener("click", async function(){
 
             setTimeout(async function() {
 
-            
+                let analysis = null;
+
                 try {
 
-                    const imageData = await fileToDataURL(file);
+                    analysis = await analyzeFace(preview);
 
-                    const result = await analyzeImage(imageData);
-
-                    console.log("AI RESULT:", result);
+                    if (!analysis) {
+                        scanStatus.textContent =
+                            "No face detected — try a clear, front-facing photo.";
+                    }
 
                 } catch (error) {
 
-                    console.error("AI ERROR:", error);
+                    console.error("Face analysis error:", error);
+                    scanStatus.textContent =
+                        "Something went wrong analyzing that photo. Please try again.";
 
                 }
 
@@ -93,6 +108,24 @@ analyzeBtn.addEventListener("click", async function(){
 
                 progress.style.width = "0%";
                 loadingText.textContent = "0%";
+
+                if (analysis) {
+
+                    scanStatus.textContent = "";
+
+                    scanOverallScoreEl.textContent = (analysis.overall / 10).toFixed(1) + " / 10";
+                    scanTierEl.textContent = analysis.tier;
+                    scanSymmetryScoreEl.textContent = analysis.symmetry.toFixed(1);
+                    scanGoldenScoreEl.textContent = analysis.golden.toFixed(1);
+
+                    setScaleValue(scanOverallMarker, analysis.overall);
+                    setScaleValue(scanSymmetryMarker, analysis.symmetry);
+                    setScaleValue(scanGoldenMarker, analysis.golden);
+
+                    scanResults.classList.remove("hidden");
+                    scanResults.scrollIntoView({ behavior: "smooth", block: "center" });
+
+                }
 
                 preview.src = "";
                 preview.style.display = "none";
@@ -202,16 +235,4 @@ questions.forEach(function(question){
         }
     })
 })
-
-function fileToDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-
-        reader.readAsDataURL(file);
-    });
-}
-
 
