@@ -15,6 +15,22 @@ export function initUI() {
   initAccordion();
   initSpotlight();
   stampFooterYear();
+  dropNoJsClass();
+}
+
+// The <body> ships with class="no-js" so that, without JavaScript, nothing is
+// hidden behind an animation that will never run. Nothing ever removed it, so
+// the guard in style.css (`body:not(.no-js) [data-reveal] { opacity: 0 }`) never
+// matched and the scroll-reveal animation was silently dead -- every [data-reveal]
+// block was simply always visible.
+//
+// It is dropped HERE, at the end of initUI, and not earlier: initReveal() has to
+// have registered its IntersectionObserver first, otherwise removing the class
+// would hide every reveal block and leave them waiting for an observer that is
+// not there yet. As written, the moment the class is gone the observer already
+// owns the elements, so they cannot be stranded at opacity 0.
+function dropNoJsClass() {
+  document.body.classList.remove("no-js");
 }
 
 function stampFooterYear() {

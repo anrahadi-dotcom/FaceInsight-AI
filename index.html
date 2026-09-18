@@ -17,6 +17,8 @@
 
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
+    <!-- Kept separate from style.css so the hairstyle tool stays self-contained. -->
+    <link rel="stylesheet" href="css/hairstyle.css">
 </head>
 
 <body class="no-js">
@@ -45,6 +47,7 @@
                 <li><a class="nav-link" href="#home">Home</a></li>
                 <li><a class="nav-link" href="#features">Features</a></li>
                 <li><a class="nav-link" href="#about">How it works</a></li>
+                <li><a class="nav-link" href="#hairstyle">Hairstyle</a></li>
                 <li><a class="nav-link" href="#faq">FAQ</a></li>
                 <li><a class="nav-link" href="#contact">Contact</a></li>
             </ul>
@@ -1030,6 +1033,108 @@
                                     internet connection on first load — after that the browser caches them.
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== AI HAIRSTYLE =====
+             A self-contained tool, deliberately SEPARATE from the scanner: its own
+             file input, its own button, its own result panel. It shares nothing
+             with #scanner except the engine underneath, so a change here cannot
+             break the scan flow, and vice versa. The photo a user drops here is
+             never the photo the scanner is holding.
+             (No hyphen runs inside this comment: a double hyphen closes an HTML
+             comment early and dumps the rest of the text onto the page.) -->
+        <section id="hairstyle" class="section hairstyle">
+            <div class="container">
+                <div class="section-head section-head--center" data-reveal>
+                    <span class="eyebrow">Hairstyle advisor</span>
+                    <h2>Which haircut suits your face shape</h2>
+                    <p>
+                        Drop in one straight-on photo. We measure the width ratios of your face,
+                        classify its shape, and suggest the cuts that flatter it — each one with the
+                        reason it was picked.
+                    </p>
+                </div>
+
+                <div class="hairstyle__layout">
+                    <!-- ---- input column ---- -->
+                    <div class="hairstyle__col hairstyle__col--input" data-reveal>
+                        <label for="hairInput" class="hair-drop" id="hairDrop" tabindex="0">
+                            <input type="file" id="hairInput" accept="image/*">
+
+                            <span class="hair-drop__empty">
+                                <span class="upload-icon-ring" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 16V5M7.5 9.5L12 5l4.5 4.5" />
+                                        <path d="M4.5 15v3A2 2 0 0 0 6.5 20h11a2 2 0 0 0 2-2v-3" />
+                                    </svg>
+                                </span>
+                                <h3 class="upload-title">Drop a front-facing photo</h3>
+                                <p class="upload-text">or <span class="upload-link">click to browse</span></p>
+                                <p class="upload-hint">Same photo rules as the scanner · h&#8203;air on show gives the best read</p>
+                            </span>
+
+                            <span class="hair-drop__preview">
+                                <img id="hairPreview" src="" alt="">
+                                <span class="hair-drop__file" id="hairFileName"></span>
+                            </span>
+                        </label>
+
+                        <div class="hair-actions">
+                            <button type="button" class="btn btn--primary btn--lg" id="hairAnalyzeBtn" disabled>
+                                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M4 20c0-5 3.6-8 8-8s8 3 8 8" />
+                                    <circle cx="12" cy="7.5" r="3.6" />
+                                </svg>
+                                <span>Find my haircuts</span>
+                            </button>
+                            <button type="button" class="btn btn--ghost btn--lg" id="hairResetBtn" hidden>
+                                <span>Reset</span>
+                            </button>
+                        </div>
+
+                        <div id="hairLoading" class="scan-loading" aria-hidden="true">
+                            <div class="bar"><i class="progress"></i></div>
+                            <p id="hairLoadingText">0%</p>
+                            <span class="scan-loading__spinner" aria-hidden="true"></span>
+                        </div>
+
+                        <p id="hairStatus" class="scan-status" role="status" aria-live="polite"></p>
+                    </div>
+
+                    <!-- ---- result column ---- -->
+                    <div class="hairstyle__col hairstyle__col--result">
+                        <div id="hairResults" class="hair-results hidden" aria-live="polite">
+                            <div class="hair-shape-card">
+                                <span class="hair-shape-card__kicker">Measured face shape</span>
+                                <strong class="hair-shape-card__value" id="hairShapeValue">--</strong>
+                                <p class="hair-shape-card__summary" id="hairShapeSummary"></p>
+                                <p class="hair-shape-card__avoid" id="hairShapeAvoid"></p>
+                            </div>
+
+                            <p class="hair-results__note" id="hairNote" hidden></p>
+
+                            <h3 class="hair-results__heading" id="hairCutHeading">Shortlisted cuts</h3>
+                            <ul class="hair-cut-list" id="hairCutList"></ul>
+
+                            <p class="hair-disclaimer">
+                                These are styling principles applied to your measured proportions, not a
+                                guarantee — a hairdresser can adapt them to your hair type and growth pattern.
+                            </p>
+                        </div>
+
+                        <div class="hair-placeholder" id="hairPlaceholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4 20c0-5 3.6-8 8-8s8 3 8 8" />
+                                <circle cx="12" cy="7.5" r="3.6" />
+                            </svg>
+                            <p>Your face shape and matching cuts will appear here.</p>
                         </div>
                     </div>
                 </div>

@@ -4,10 +4,15 @@ import {
   combineAnalysis,
   tierFor,
   tiersFor,
+  ModelLoadError,
 } from "./faceEngine.js";
 import { createScale, setScaleValue, renderTicks } from "./scale.js";
 import { tipsForAnalysis, tipsHeadingFor } from "./tips.js";
 import { initUI, showToast } from "./ui/index.js";
+// Self-contained section controller. Imported for its side effect: it wires its
+// own listeners and shares no state with the scanner below. Safe to keep if the
+// section is ever removed -- it no-ops when its elements are absent.
+import "./hairstyle-ui.js";
 
 // Initialize UI chrome (nav sticky/drawer, reveal animations, stat counters, FAQ
 // accordion, card spotlight, footer year). This runs EXACTLY ONCE.
@@ -303,6 +308,39 @@ document.addEventListener(
 // NOT delayed by this: the report renders when it is ready, and this only caps
 // how briefly the decoration may flash.
 const SIDE_OVERLAY_MIN_MS = 1100;
+
+// Hard ceiling on a single model call. MediaPipe's loader can sit unresolved
+// forever when its WASM bundle is blocked or half-downloaded -- neither resolving
+// nor rejecting -- which left the scan parked at 95% with the spinner running and
+// the button dead, the worst failure mode the app had. A timeout turns that
+// silent hang into a normal, reportable error.
+//
+// 25s is chosen deliberately: a genuine first load over a slow connection can
+// take 15-20s, so a shorter limit would abort scans that were about to succeed.
+const MODEL_CALL_TIMEOUT_MS = 25000;
+
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(
+        new ModelLoadError(
+          "blocked",
+          new Error(`${label} did not respond within ${ms}ms`)
+        )
+      );
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
 
 function holdSideOverlay(startedAt) {
   const elapsed = Date.now() - startedAt;
@@ -774,10 +812,51 @@ if (analyzeBtn) {
     // bar pinned at 95%, the button stayed disabled and the overlay never hid. The
     // finally guarantees the timer is always stopped and the UI always recovers,
     // whatever throws.
+    // Set when the face model itself could not be fetched. Tracked separately
+    // from `analysis === null` because the two need completely different
+    // messages: a blocked CDN is not the same problem as a photo without a face,
+    // and telling the user "no face detected" when the model never loaded sends
+    // them off retaking photos that were never the issue.
+    let modelLoadFailure = null;
+
     try {
       try {
-        analysis = await analyzeFrontPhoto(preview);
+        analysis = await withTimeout(
+          analyzeFrontPhoto(preview),
+          MODEL_CALL_TIMEOUT_MS,
+          "The face model"
+        );
+        // The engine reports a failed model download as a property on the result
+        // rather than an exception, so that this handler's own cleanup always
+        // runs (see the note in analyzeFrontPhoto). Read it here.
+        // The engine can report a failed model load in two ways: as a property on
+        // the result, or (older shape) as a thrown ModelLoadError. Both are
+        // checked, and the check is on the VALUE rather than a truthiness test of
+        // `analysis`, so a result of `{noFace:true, modelLoadError:null}` -- a
+        // genuine no-face photo -- is correctly NOT treated as a load failure.
+        const reportedLoadError = analysis && analysis.modelLoadError;
+        if (reportedLoadError) {
+          modelLoadFailure = reportedLoadError;
+          analysis = null;
+        } else if (analysis && analysis.noFace && analysis.landmarks === null) {
+          // `noFace` alone is NOT enough: the engine deliberately fills
+          // `landmarks` with a synthetic face (generateFallbackLandmarks) so that
+          // nothing downstream throws, which means `landmarks === null` is never
+          // true on this path. `isFallback` is the honest flag for "no mesh was
+          // ever produced", and noFace+isFallback together mean the model gave
+          // us nothing -- whether because it failed to load or because the photo
+          // genuinely has no face. Either way the user must be told, so the
+          // message here covers both and points at the likelier cause first.
+          modelLoadFailure = new ModelLoadError(
+            navigator.onLine === false ? "offline" : "unknown",
+            new Error("no mesh produced; landmarks were synthetic")
+          );
+          analysis = null;
+        }
       } catch (error) {
+        if (error instanceof ModelLoadError) {
+          modelLoadFailure = error;
+        }
         console.error("Front analysis error:", error);
       }
       if (hasSide) {
@@ -794,8 +873,18 @@ if (analyzeBtn) {
         if (sideScanBadge) sideScanBadge.textContent = "Measuring profile line...";
         const sideStartedAt = Date.now();
         try {
-          sideAnalysis = await analyzeSidePhoto(sidePreview);
+          sideAnalysis = await withTimeout(
+            analyzeSidePhoto(sidePreview),
+            MODEL_CALL_TIMEOUT_MS,
+            "The profile model"
+          );
         } catch (error) {
+          // The model is already warm by now, so a failure here is not a load
+          // problem -- but do not let a ModelLoadError slip past unlabelled
+          // either, since the front pass may have failed for the same reason.
+          if (error instanceof ModelLoadError && !modelLoadFailure) {
+            modelLoadFailure = error;
+          }
           console.error("Side analysis error:", error);
         }
         // Keep the beam on screen long enough to be seen (see SIDE_OVERLAY_MIN_MS).
@@ -855,6 +944,31 @@ if (analyzeBtn) {
         </svg>
         <span>Re-analyze photo</span>
       `;
+
+      // MODEL LOAD FAILURE takes priority over everything below. If the model
+      // never arrived, there is no analysis to report and the honest thing to do
+      // is say so and stop -- running on to "no face detected" would blame the
+      // user's photo for a network problem.
+      if (modelLoadFailure) {
+        if (scanStatus) {
+          // Plain text, no emoji: a multi-byte emoji is the one thing that has
+          // repeatedly corrupted this file's encoding across edits, and the
+          // message reads just as clearly without one.
+          scanStatus.textContent =
+            modelLoadFailure.message ||
+            "The face model could not be loaded. Check your connection and try again.";
+          scanStatus.classList.remove("is-note", "is-side-only");
+          scanStatus.classList.add("is-visible");
+          scanStatus.dataset.source = "scan";
+        }
+        if (scanResults) {
+          scanResults.classList.remove("is-visible", "visible");
+          scanResults.classList.add("hidden");
+          scanResults.style.display = "none";
+        }
+        showToast("Face model unavailable — check your connection", "error");
+        return;
+      }
 
       if (analysis) {
         // Draw facial landmarks directly on top of the uploaded photo

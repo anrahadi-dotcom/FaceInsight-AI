@@ -1,9 +1,43 @@
-import {
-  FaceDetector,
-  FaceLandmarker,
-  FilesetResolver,
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
-import * as faceapi from "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/+esm";
+// -----------------------------------------------------------------------------
+// WHY THESE ARE DYNAMIC IMPORTS AND NOT STATIC ONES
+//
+// These two libraries are fetched from a CDN at runtime. As STATIC imports at
+// the top of this module they made the whole module fail to load whenever that
+// CDN was unreachable -- and because main.js imports this file, the failure
+// propagated: nav, FAQ, scanner and the hairstyle tool all died, leaving a page
+// of dead HTML with no error shown anywhere. A blocked CDN therefore did not
+// produce "the model could not load"; it produced a page that looked broken for
+// no visible reason.
+//
+// Loading them inside the functions that need them means a CDN failure is a
+// normal rejected promise, catchable and reportable, instead of a module-load
+// error that takes the application down with it.
+const MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const FACEAPI_CDN = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/+esm";
+
+// Cached module namespaces, loaded on first use.
+let mediapipeModule = null;
+let faceapiModule = null;
+
+async function loadMediapipe() {
+  if (mediapipeModule) return mediapipeModule;
+  try {
+    mediapipeModule = await import(/* @vite-ignore */ MEDIAPIPE_CDN);
+  } catch (error) {
+    throw classifyModelError(error, "wasm");
+  }
+  return mediapipeModule;
+}
+
+async function loadFaceapi() {
+  if (faceapiModule) return faceapiModule;
+  try {
+    faceapiModule = await import(/* @vite-ignore */ FACEAPI_CDN);
+  } catch (error) {
+    throw classifyModelError(error, "model");
+  }
+  return faceapiModule;
+}
 
 // Used only to auto-detect gender so the tier label (Chad vs. Stacy, etc.)
 // matches the person in the photo. Small, fully client-side models. Each
@@ -240,19 +274,100 @@ let visionFileset = null;
 // model), so it is resolved once and reused.
 async function ensureFileset() {
   if (!visionFileset) {
-    visionFileset = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-    );
+    const { FilesetResolver } = await loadMediapipe();
+    visionFileset = await FilesetResolver.forVisionTasks(MEDIAPIPE_CDN + "/wasm");
   }
   return visionFileset;
 }
 
+// ------------------------------------------------------------------ load errors
+//
+// Everything the engine needs (the MediaPipe WASM bundle, the .task model, the
+// face-api weights) is fetched from a third-party CDN at runtime. A slow,
+// filtered or blocked network therefore turns into a scan that silently does
+// nothing -- the worst possible failure, because the user sees a spinner and then
+// "no face detected", and concludes the APP is broken rather than the network.
+//
+// These helpers classify the failure so the UI can say something true and
+// actionable, and ModelLoadError carries the technical cause for the console.
+
+export class ModelLoadError extends Error {
+  constructor(kind, cause) {
+    super(MODEL_ERROR_TEXT[kind] || MODEL_ERROR_TEXT.unknown);
+    this.name = "ModelLoadError";
+    this.kind = kind; // "offline" | "blocked" | "no-wasm" | "unknown"
+    this.cause = cause;
+  }
+}
+
+// User-facing copy. Deliberately specific about WHAT failed and WHAT to do --
+// "please try again" is useless when the real problem is a blocked domain.
+const MODEL_ERROR_TEXT = {
+  offline:
+    "The face model needs a connection the first time it loads, and the browser reports you are offline. Reconnect, then try again.",
+  blocked:
+    "The face model could not be downloaded. A firewall, ad-blocker or network filter may be blocking cdn.jsdelivr.net or storage.googleapis.com. Allow those domains (or switch networks) and try again.",
+  "no-wasm":
+    "The face model's WebAssembly engine failed to start. This usually means the browser is too old or WebAssembly is disabled — try an up-to-date Chrome, Edge or Firefox.",
+  unknown: "The face model failed to load. Check your connection and try again.",
+};
+
+// Decide which of the above applies. Order matters: an offline browser is the
+// most certain diagnosis, so it wins even if the failure also looks like a
+// network rejection.
+function classifyModelError(error, stage) {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return new ModelLoadError("offline", error);
+  }
+
+  const message = String((error && (error.message || error)) || "").toLowerCase();
+  const name = String((error && error.name) || "").toLowerCase();
+
+  // NETWORK SIGNS FIRST. This order is the fix for a real misdiagnosis: the
+  // "wasm" stage used to win unconditionally, so a FAILED DOWNLOAD of the wasm
+  // bundle was reported to the user as "your browser is too old or WebAssembly
+  // is disabled" -- blaming the juror's machine for our network problem. A
+  // fetch-level failure is a network failure no matter which stage noticed it.
+  const networkSigns =
+    /failed to fetch|networkerror|network error|load failed|err_|net::|err_failed|403|404|cors|blocked|aborterror|timeout|dynamically imported module/.test(
+      message
+    ) || name === "typeerror"; // fetch() rejects with a bare TypeError when blocked
+  if (networkSigns) {
+    return new ModelLoadError("blocked", error);
+  }
+
+  // Only once the network is ruled out does a wasm-instantiation failure mean
+  // the WebAssembly engine itself is the problem. Note `modulefactory` is NOT in
+  // this list: "ModuleFactory not set" is thrown when the MediaPipe bundle is
+  // incomplete, which in practice is a truncated download, not a dead engine.
+  if (/instantiate|webassembly|compileerror|linkerror/.test(message)) {
+    return new ModelLoadError("no-wasm", error);
+  }
+
+  // Stage is a last-resort hint, not a verdict.
+  if (stage === "wasm") return new ModelLoadError("blocked", error);
+
+  return new ModelLoadError("unknown", error);
+}
+
 export function ensureLandmarker() {
   if (faceLandmarker) return Promise.resolve(faceLandmarker);
+  // A failed attempt must NOT be cached. The previous version left
+  // `loadingPromise` holding a rejected promise forever, so every later call
+  // re-returned the same rejection: a user whose Wi-Fi dropped for one second
+  // could never scan again without a full page reload. Clearing the slot on
+  // failure is what makes retry actually retry.
   if (loadingPromise) return loadingPromise;
 
   loadingPromise = (async () => {
-    const filesetResolver = await ensureFileset();
+    let filesetResolver;
+    try {
+      filesetResolver = await ensureFileset();
+    } catch (error) {
+      loadingPromise = null;
+      throw error instanceof ModelLoadError ? error : classifyModelError(error, "wasm");
+    }
+    const { FaceLandmarker } = await loadMediapipe();
     faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
       baseOptions: {
         modelAssetPath: FACE_LANDMARKER_MODEL_URL,
@@ -287,13 +402,18 @@ export function ensureLandmarker() {
       // the estimateYaw() heuristic this file used before (which inferred a turn
       // from how far the nose sat from the cheek midpoint). Default false, so it
       // has to be requested explicitly -- see rotationFromMatrix().
-      outputFacialTransformationMatrixes: true,
-    });
-    return faceLandmarker;
-  })();
-
-  return loadingPromise;
-}
+                  outputFacialTransformationMatrixes: true,
+                });
+                return faceLandmarker;
+              })().catch((error) => {
+                // Clear the cache so the next call genuinely retries (see above), then surf
+                // the classified error so main.js can show it instead of a dead spinner.
+                loadingPromise = null;
+                faceLandmarker = null;
+                throw error instanceof ModelLoadError ? error : classifyModelError(error, "model");
+              });
+              return loadingPromise;
+            }
 
 // Lazily-loaded BlazeFace FULL-RANGE detector. Used ONLY as a fallback when the
 // landmark model cannot find a face, which in practice means a near-true-profile
@@ -307,6 +427,7 @@ async function ensureFullRangeDetector() {
   fullRangePromise = (async () => {
     try {
       const filesetResolver = await ensureFileset();
+      const { FaceDetector } = await loadMediapipe();
       fullRangeDetector = await FaceDetector.createFromOptions(filesetResolver, {
         baseOptions: {
           modelAssetPath: BLAZE_FACE_FULL_RANGE_URL,
@@ -328,10 +449,23 @@ async function ensureFullRangeDetector() {
 
 function ensureFaceapiModels() {
   if (!faceapiModelsPromise) {
-    faceapiModelsPromise = Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(TINY_FACE_DETECTOR_URL),
-      faceapi.nets.ageGenderNet.loadFromUri(AGE_GENDER_MODEL_URL),
-    ]);
+    faceapiModelsPromise = (async () => {
+      // loadFaceapi() throws a classified ModelLoadError if the CDN is blocked,
+      // which is the difference between "the network is down" and "we looked and
+      // found no face" -- the two must not be conflated in the UI.
+      const faceapi = await loadFaceapi();
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(TINY_FACE_DETECTOR_URL),
+        faceapi.nets.ageGenderNet.loadFromUri(AGE_GENDER_MODEL_URL),
+      ]);
+      return faceapi;
+      // (Returned so callers get the namespace without a second dynamic import.)
+    })();
+    // A failed load must not be cached for the life of the page (see the note on
+    // ensureLandmarker above): clear the slot so the next scan retries.
+    faceapiModelsPromise.catch(() => {
+      faceapiModelsPromise = null;
+    });
   }
   return faceapiModelsPromise;
 }
@@ -345,6 +479,7 @@ function ensureSsdDetector() {
   if (!ssdDetectorPromise) {
     ssdDetectorPromise = (async () => {
       try {
+        const faceapi = await loadFaceapi();
         await faceapi.nets.ssdMobilenetv1.loadFromUri(SSD_FACE_DETECTOR_URL);
         return true;
       } catch (err) {
@@ -363,7 +498,7 @@ function ensureSsdDetector() {
 // classifier can't find/read a face -- the geometry scores are unaffected.
 async function detectGender(imgEl, landmarks) {
   try {
-    await ensureFaceapiModels();
+    const faceapi = await ensureFaceapiModels();
     const detection = await faceapi
       .detectSingleFace(imgEl, new faceapi.TinyFaceDetectorOptions())
       .withAgeAndGender();
@@ -3512,6 +3647,12 @@ async function detectMesh(imgEl) {
     }
   } catch (err) {
     out.error = err;
+    // A ModelLoadError is NOT a detection result -- it means the model never
+    // arrived. Swallowing it here was a real bug: the caller saw only
+    // `landmarks: null`, concluded "no face in this photo", and told the user to
+    // try a clearer picture. Anyone behind a blocked CDN would then retake good
+    // photos forever. Re-thrown so the scan can report the actual cause.
+    if (err instanceof ModelLoadError) throw err;
     console.warn("MediaPipe landmark detection fallback active:", err);
   }
   return out;
@@ -3590,6 +3731,10 @@ async function detectFaceBoxFullRange(imgEl) {
   const ssdReady = await ensureSsdDetector();
   if (ssdReady) {
     try {
+      // The module namespace is fetched here rather than referenced from a
+      // top-level binding, because the top-level import is what used to take
+      // the whole file down when the CDN was unreachable.
+      const faceapi = await loadFaceapi();
       const det = await faceapi.detectSingleFace(
         imgEl,
         new faceapi.SsdMobilenetv1Options({ minConfidence: 0.35 })
@@ -3624,7 +3769,27 @@ export async function analyzeFrontPhoto(imgEl) {
   // Blend-shape confidences (lid closure etc.) come from the same detection run.
   // Kept as an empty array rather than null so downstream code can treat
   // "no blendshapes" uniformly as "not measured" (see readBlendshape).
-  const detection = await detectMesh(imgEl);
+  // A ModelLoadError here means the model never downloaded. It is caught and
+  // surfaced as a property rather than thrown, because the caller (main.js) does
+  // its UI recovery in the code AFTER its try/finally -- an exception escaping
+  // this function skipped that recovery and left the scan stuck on
+  // "Scanning face..." with the spinner running forever. Returning the failure
+  // keeps the caller in control of its own cleanup.
+  let detection;
+  try {
+    detection = await detectMesh(imgEl);
+  } catch (error) {
+    if (error instanceof ModelLoadError) {
+      return {
+        noFace: true,
+        modelLoadError: error,
+        landmarks: null,
+        blendshapes: [],
+        rotation: null,
+      };
+    }
+    throw error;
+  }
   landmarks = detection.landmarks;
   const blendshapes = detection.blendshapes;
   // Real 3D head rotation from the facial transformation matrix (null when the

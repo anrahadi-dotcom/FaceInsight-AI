@@ -1,0 +1,392 @@
+/* ==========================================================================
+   22. AI Hairstyle advisor
+   --------------------------------------------------------------------------
+   A section that lives OUTSIDE the scanner: its own input, its own button, its
+   own result panel. Nothing here targets a .scanner or .upload-stack selector,
+   so the two tools cannot interfere with each other. Colours stay inside the
+   Cyber-Medical palette: cyan for the primary action and the measured shape,
+   amber only for the "could not read this photo" warning.
+   ========================================================================== */
+
+.hairstyle__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.hairstyle__col {
+  min-width: 0;
+}
+
+/* --- 22.1 The drop target ------------------------------------------------- */
+/* Uses the dashboard-panel treatment (surface-2 -> surface-alt) rather than the
+   scanner's dashed cyan box, so it reads as a different tool on the same page
+   instead of a duplicate of the scanner. */
+.hair-drop {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  padding: 1.75rem 1.25rem;
+  border: 1.5px dashed rgba(6, 182, 212, 0.35);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 50% 24%, rgba(6, 182, 212, 0.1), transparent 64%),
+    linear-gradient(180deg, var(--surface-2), var(--surface-alt));
+  cursor: pointer;
+  overflow: hidden;
+  outline: none;
+  transition:
+    border-color 0.35s var(--ease),
+    background 0.35s var(--ease),
+    transform 0.35s var(--ease),
+    box-shadow 0.35s var(--ease);
+}
+
+.hair-drop:hover,
+.hair-drop:focus-visible {
+  border-color: rgba(0, 240, 255, 0.75);
+  transform: translateY(-3px);
+  box-shadow:
+    0 22px 50px rgba(2, 6, 23, 0.5),
+    0 0 50px rgba(6, 182, 212, 0.16);
+}
+
+.hair-drop.is-dragging {
+  border-style: solid;
+  border-color: var(--neon);
+  background: radial-gradient(
+    circle at 50% 24%,
+    rgba(0, 240, 255, 0.22),
+    transparent 64%
+  );
+}
+
+/* Same visually-hidden pattern the scanner uses for its file input. */
+.hair-drop input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hair-drop__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.3rem;
+}
+
+.hair-drop.has-image .hair-drop__empty {
+  display: none;
+}
+
+.hair-drop__preview {
+  display: none;
+  position: relative;
+  width: 100%;
+}
+
+.hair-drop.has-image .hair-drop__preview {
+  display: block;
+  animation: previewIn 0.5s var(--ease);
+}
+
+#hairPreview {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  background: rgba(2, 6, 23, 0.4);
+}
+
+.hair-drop__file {
+  display: block;
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hair-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.1rem;
+}
+
+/* --- 22.2 Result: the measured shape card -------------------------------- */
+.hair-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: fadeUp 0.6s var(--ease);
+}
+
+.hair-results.hidden {
+  display: none;
+}
+
+.hair-shape-card {
+  position: relative;
+  padding: 1.5rem 1.4rem;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(
+      460px 220px at 50% -25%,
+      rgba(6, 182, 212, 0.26),
+      transparent 72%
+    ),
+    linear-gradient(180deg, var(--surface-2), var(--surface-alt));
+  overflow: hidden;
+  text-align: center;
+}
+
+.hair-shape-card__kicker {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+
+/* The shape name is the headline finding, so it gets the same neon-to-indigo
+   pan the score read-outs use -- it is the number this whole section rests on. */
+.hair-shape-card__value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  background: linear-gradient(100deg, #ffffff, var(--neon) 45%, var(--indigo));
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradientPan 8s ease-in-out infinite alternate;
+}
+
+.hair-shape-card__summary {
+  margin: 0.7rem auto 0;
+  max-width: 44ch;
+  color: var(--text);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+/* The "avoid" line is a caution, not an error: amber text on a quiet surface,
+   no left bar (that is reserved for blocking messages like the side-only guard). */
+.hair-shape-card__avoid {
+  margin: 0.7rem auto 0;
+  max-width: 44ch;
+  color: #fde68a;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.hair-shape-card__avoid::before {
+  content: "Avoid: ";
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.hair-results__note {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 182, 212, 0.08);
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.hair-results__note[hidden] {
+  display: none;
+}
+
+.hair-results__heading {
+  margin: 0.3rem 0 0;
+  color: var(--cyan);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* --- 22.3 The shortlist --------------------------------------------------- */
+.hair-cut-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.hair-cut {
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(30, 41, 59, 0.5);
+  transition:
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease),
+    transform 0.3s var(--ease),
+    box-shadow 0.3s var(--ease);
+}
+
+.hair-cut:hover {
+  border-color: rgba(6, 182, 212, 0.45);
+  background: rgba(6, 182, 212, 0.08);
+  transform: translateX(3px);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.4);
+}
+
+/* Rank badge, matching the strengths card's numbered discs so the two panels
+   read as siblings. */
+.hair-cut__rank {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #04202a;
+  background: linear-gradient(135deg, var(--neon), var(--indigo));
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.32);
+}
+
+.hair-cut__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.hair-cut__name {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+
+.hair-cut__why {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.hair-cut__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.hair-cut__tag {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--dim);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.hair-disclaimer {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+/* --- 22.4 Empty state ----------------------------------------------------- */
+.hair-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  min-height: 300px;
+  padding: 2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-alt));
+  color: var(--dim);
+  text-align: center;
+}
+
+.hair-placeholder[hidden] {
+  display: none;
+}
+
+.hair-placeholder svg {
+  width: 42px;
+  height: 42px;
+  color: var(--cyan);
+  opacity: 0.7;
+  animation: breathe 6s ease-in-out infinite;
+}
+
+.hair-placeholder p {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.88rem;
+}
+
+/* --- 22.5 Responsive ------------------------------------------------------ */
+@media (max-width: 900px) {
+  .hairstyle__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .hair-drop {
+    min-height: 240px;
+    padding: 1.35rem 1rem;
+  }
+
+  .hair-actions {
+    flex-direction: column-reverse;
+  }
+
+  .hair-actions .btn {
+    width: 100%;
+  }
+
+  .hair-placeholder {
+    min-height: 190px;
+    padding: 1.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hair-shape-card__value,
+  .hair-placeholder svg {
+    animation: none !important;
+  }
+  .hair-cut:hover,
+  .hair-drop:hover,
+  .hair-drop:focus-visible {
+    transform: none;
+  }
+}
