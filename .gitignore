@@ -1,2 +1,11 @@
 .vercel
 .env*
+
+# Dev harness scratch output.
+# tools/ itself is committed (the scripts are useful), but the screenshots they
+# write and any raw run logs are not. A stray dotfile in the repo root once read
+# as configuration and was mistaken for part of the app.
+tools/**/*.png
+tools/**/*.jpg
+.json
+*.log

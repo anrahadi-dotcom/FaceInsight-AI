@@ -2,15 +2,20 @@
 // previews the value/tier at that point on the track even before a real
 // score is set; setScaleValue() then slides a marker to the actual result.
 
-const TIER_TICKS = [
-  { pos: 0, label: "Needs work" },
-  { pos: 40, label: "Average" },
-  { pos: 60, label: "Above avg" },
-  { pos: 75, label: "Chad" },
-  { pos: 88, label: "Mogger" },
-];
+export function renderTicks(ticksEl, ticks) {
+  ticksEl.innerHTML = "";
+  ticks.forEach((t, i) => {
+    const span = document.createElement("span");
+    span.style.left = `${t.pos}%`;
+    // Stagger alternating labels onto a second row -- six tight tiers
+    // would otherwise overlap each other's text.
+    if (i % 2 === 1) span.classList.add("tick-low");
+    span.textContent = t.label;
+    ticksEl.appendChild(span);
+  });
+}
 
-export function createScale(mountEl, { withTicks = false, tierForFn = null } = {}) {
+export function createScale(mountEl, { ticks = null, tierForFn = null } = {}) {
   mountEl.innerHTML = "";
 
   const scale = document.createElement("div");
@@ -33,15 +38,11 @@ export function createScale(mountEl, { withTicks = false, tierForFn = null } = {
   track.appendChild(marker);
   scale.appendChild(track);
 
-  if (withTicks) {
-    const ticksEl = document.createElement("div");
+  let ticksEl = null;
+  if (ticks) {
+    ticksEl = document.createElement("div");
     ticksEl.className = "scale-ticks";
-    for (const t of TIER_TICKS) {
-      const span = document.createElement("span");
-      span.style.left = `${t.pos}%`;
-      span.textContent = t.label;
-      ticksEl.appendChild(span);
-    }
+    renderTicks(ticksEl, ticks);
     scale.appendChild(ticksEl);
   }
 
@@ -71,7 +72,7 @@ export function createScale(mountEl, { withTicks = false, tierForFn = null } = {
   });
 
   mountEl.appendChild(scale);
-  return marker;
+  return { marker, ticksEl };
 }
 
 export function setScaleValue(marker, value) {

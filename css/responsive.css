@@ -1,127 +1,481 @@
-/*Handphone*/
-@media (max-width: 768px) {
-  .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
+/* ==========================================================================
+   FaceInsight AI — responsive layer.
+   Breakpoints: 1080 (tablet landscape), 900 (tablet portrait), 768 (phone
+   nav drawer), 520 (small phone).
+   ========================================================================== */
 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-
-    padding: 20px;
-    box-sizing: border-box;
+/* ---------------------------------------------------------- <= 1080px */
+@media (max-width: 1080px) {
+  :root {
+    --header-h: 68px;
   }
 
-  .nav-links {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-
-    width: 100%;
-    padding: 0;
-    margin: 0;
-  }
-  .hero {
-    flex-direction: column;
-    text-align: center;
-    gap: 50px;
-    padding: 60px 20px;
-    padding-top: 180px;
-    overflow: hidden;
-    width: 100%;
+  .hero__inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
   }
 
-  .hero-content {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .hero-content h1 {
-    font-size: 38px;
-    line-height: 1.2;
-  }
-
-  .hero-content p {
-    font-size: 16px;
-    max-width: 320px;
-    margin: 0 auto 35px;
-  }
-
-  .hero-buttons {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 16px;
+  .hero__visual {
+    order: 2;
   }
 
   .ai-card {
-    width: 100%;
-    max-width: 360px;
-    margin: 40px auto 0;
+    width: min(420px, 100%);
   }
 
-  .hero-image {
-    width: 100%;
-    justify-content: center;
-    flex: none;
-    display: flex;
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  .steps__connector {
+    display: none;
+  }
+
+  .report__card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  .report__summary {
+    flex-direction: row;
     align-items: center;
+    gap: 1.75rem;
+    flex-wrap: wrap;
   }
+}
 
-  body {
-    overflow-x: hidden;
-  }
-
-  .logo {
-    font-size: 22px;
-    text-align: center;
-    margin-bottom: 10px;
+/* ----------------------------------------------------------- <= 900px */
+@media (max-width: 900px) {
+  .container,
+  .container--narrow {
+    width: min(100% - 2.5rem, 1180px);
   }
 
   .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .feature-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
+
+  .cta-band__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 2rem;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .footer-bottom__note {
+    text-align: left;
+  }
+}
+
+/* ----------------------------------------------------------- <= 768px */
+@media (max-width: 768px) {
+  /* --- navigation drawer --- */
+  .nav-toggle {
+    display: grid;
+  }
+
+  .logo__text {
+    font-size: 1rem;
+  }
+
+  .logo__mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    right: 0;
+    z-index: 99;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 20px;
+    align-items: stretch;
+    gap: 0.2rem;
+    margin: 0;
+    padding: 0.9rem 1.25rem 1.35rem;
+    background: rgba(15, 23, 42, 0.97);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 24px 40px rgba(2, 6, 23, 0.6);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
+      visibility 0.3s var(--ease);
   }
 
-  .feature-card {
-    width: 100%;
-    max-width: 340px;
+  .nav-links.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
   }
 
-  .upload-container {
-    width: 100%;
-    padding: 0 20px;
-    box-sizing: border-box;
+  .nav-link {
+    display: block;
+    padding: 0.85rem 0.75rem;
+    font-size: 1rem;
+    border-radius: 12px;
   }
 
-  .upload-box {
-    width: 100%;
-    max-width: 340px;
-    margin: 0 auto;
+  .nav-link::after {
+    left: 0.75rem;
+    bottom: 8px;
+    transform: none;
   }
 
-  * {
-    box-sizing: border-box;
-
+  .nav-link:hover::after,
+  .nav-link.is-active::after {
+    width: 22px;
   }
 
+  .nav-link.is-active {
+    background: rgba(6, 182, 212, 0.12);
+    color: var(--cyan);
+  }
+
+  /* The inline "Scan now" button would crowd the bar — the hero already
+     has a primary CTA, so hide it below the drawer breakpoint. */
   .btn-scan {
-    width: fit-content;
-
+    display: none;
   }
 
-  .hero > *{
-    min-width:0;
+  /* --- hero --- */
+  .hero {
+    padding-top: calc(var(--header-h) + 2.5rem);
+  }
+
+  .hero__title {
+    font-size: clamp(2.1rem, 9vw, 2.8rem);
+  }
+
+  .hero__lead {
+    font-size: 1rem;
+  }
+
+  .hero__actions {
+    gap: 0.65rem;
+  }
+
+  .hero__actions .btn {
+    flex: 1 1 100%;
+  }
+
+  .hero__stats {
+    gap: 1.5rem;
+  }
+
+  .hero__stats .stat {
+    min-width: 76px;
+  }
+
+  .hero__stats dd {
+    font-size: 1.4rem;
+  }
+
+  .marquee__track {
+    gap: 1.75rem;
+  }
+
+  /* --- sections --- */
+  .section {
+    padding-block: 4rem;
+  }
+
+  .section-head {
+    margin-bottom: 2.25rem;
+  }
+
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .feature-card:last-child {
+    grid-column: auto;
+  }
+
+  .report__card {
+    padding: 1.5rem;
+  }
+
+  .report__ring {
+    width: 140px;
+    height: 140px;
+  }
+
+  .report__ring-label strong {
+    font-size: 1.5rem;
+  }
+
+  .report-row {
+    padding: 0.8rem 0.9rem;
+  }
+
+  /* --- scanner --- */
+  .upload-box {
+    min-height: 270px;
+    padding: 1.75rem 1.15rem;
+  }
+
+  /* Two upload slots stop fitting side by side well before the phones: below
+     this width they stack so each box keeps a usable drop target. */
+  .photo-slots {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .upload-icon-ring {
+    width: 68px;
+    height: 68px;
+  }
+
+  .upload-icon-ring svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .upload-title {
+    font-size: 1.05rem;
+  }
+
+  .upload-actions {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+
+  .upload-actions .btn {
+    width: 100%;
+  }
+
+  .scan-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scan-score {
+    font-size: 2.4rem;
+  }
+
+  .privacy-note {
+    text-align: left;
+    font-size: 0.78rem;
+  }
+
+  /* --- footer --- */
+  .footer-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+
+  .to-top {
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .toast-stack {
+    bottom: 4.75rem;
+  }
 }
 
-.nav-links a{
-  font-size: 15px;
+/* ----------------------------------------------------------- <= 520px */
+@media (max-width: 520px) {
+  .container,
+  .container--narrow {
+    width: min(100% - 1.75rem, 1180px);
+  }
+
+  h1 {
+    font-size: clamp(1.95rem, 10vw, 2.35rem);
+  }
+
+  h2 {
+    font-size: clamp(1.45rem, 7vw, 1.8rem);
+  }
+
+  .pill {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem 0.4rem 0.55rem;
+  }
+
+  .hero__stats {
+    gap: 1.1rem;
+  }
+
+  .hero__stats dd {
+    font-size: 1.25rem;
+  }
+
+  .hero__stats dt {
+    font-size: 0.68rem;
+  }
+
+  .ai-card {
+    padding: 1.1rem;
+    border-radius: 24px;
+  }
+
+  .ai-card__scan {
+    height: 175px;
+  }
+
+  .score-ring {
+    width: 76px;
+    height: 76px;
+  }
+
+  .score-ring__label strong {
+    font-size: 1.9rem;
+  }
+
+  .score-ring-row {
+    gap: 0.85rem;
+  }
+
+  /* Two columns of full-width cards on narrow screens. The base grid is 6 columns
+     with cards spanning 2 or 3, which is meaningless at this width, so every card
+     is reset to a single column of the 2-column grid -- otherwise the span values
+     would place cards in overlapping cells. */
+  .scan-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scan-detail-card,
+  .scan-detail-card--wide {
+    grid-column: span 1;
+  }
+
+  .scan-detail-card--wide {
+    grid-column: 1 / -1;
+  }
+
+  /* The eye-area composite drops to one column on narrow screens -- four cramped
+     part cards would hide the sub-scores the whole panel exists to show. */
+  .scan-eye-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scan-tips {
+    padding: 1.15rem;
+  }
+
+  .faq-question {
+    font-size: 0.95rem;
+    padding: 1rem 1.05rem;
+  }
+
+  .faq-answer__inner p {
+    padding: 0 1.05rem 1.1rem;
+    font-size: 0.9rem;
+  }
+
+  .cta-band__inner {
+    padding: 1.5rem;
+    border-radius: 24px;
+  }
+
+  .report__card {
+    padding: 1.15rem;
+    border-radius: 24px;
+  }
+
+  .report__summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+
+  .scan-score-line {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
 
+/* Very wide screens: keep the hero from stretching thin. */
+@media (min-width: 1400px) {
+  .container,
+  .container--narrow {
+    width: min(1280px, 100% - 4rem);
+  }
+}
+/* ==========================================================================
+   Cyber-Medical motion pass — responsive exceptions
+   --------------------------------------------------------------------------
+   The page-wide animation layer (style.css section 21) is tuned for a desktop
+   viewport. Two things change below the tablet breakpoint.
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  /* The rotating conic sweep behind the hero card is a large, blurred layer.
+     At phone widths it is off-screen for most of its rotation, so the GPU work
+     buys nothing visible -- it is dropped rather than merely shrunk. */
+  .ai-card::before {
+    display: none;
+  }
+
+  /* The hero children still stagger, but tighter, so the page becomes
+     interactive sooner on a device where the user is already waiting. */
+  .hero__content > * {
+    animation-duration: 0.65s;
+  }
+
+  .hero__content > .hero__title { animation-delay: 0.08s; }
+  .hero__content > .hero__lead { animation-delay: 0.14s; }
+  .hero__content > .hero__actions { animation-delay: 0.2s; }
+  .hero__content > .hero__stats { animation-delay: 0.26s; }
+
+  /* Scrolling still animates, but with a shorter travel: a 34px rise reads as
+     a lurch on a small screen where the viewport itself is short. */
+  @keyframes riseIn {
+    from { opacity: 0.15; transform: translateY(20px) scale(0.99); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@media (max-width: 768px) {
+  /* The mobile drawer grows its items in from the top, matched to the drawer's
+     own slide so the menu feels assembled rather than pasted. */
+  .nav-links.is-open .nav-link {
+    animation: navItemIn 0.4s var(--ease) both;
+  }
+
+  .nav-links.is-open li:nth-child(1) .nav-link { animation-delay: 0.04s; }
+  .nav-links.is-open li:nth-child(2) .nav-link { animation-delay: 0.08s; }
+  .nav-links.is-open li:nth-child(3) .nav-link { animation-delay: 0.12s; }
+  .nav-links.is-open li:nth-child(4) .nav-link { animation-delay: 0.16s; }
+  .nav-links.is-open li:nth-child(5) .nav-link { animation-delay: 0.2s; }
+}
+
+@keyframes navItemIn {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-links.is-open .nav-link {
+    animation: none !important;
+  }
 }

@@ -4,435 +4,1132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="FaceInsight AI analyses your facial features on-device with MediaPipe landmarks and gives you a personalised glow-up report.">
+    <meta name="theme-color" content="#0f172a">
+    <title>FaceInsight AI — On-device facial analysis</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href= "css/responsive.css">
-    <title>FaceInsight AI</title>
+    <link rel="stylesheet" href="css/responsive.css">
 </head>
 
-<body>
-    <header>
-        <nav class="navbar">
-            <a href="/" class="logo">FaceInsight AI</a>
-            <ul class="nav-links">
-                <li><a href="#home">Home</a></li>
-                <li><a href="#features">Features</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#contact">Contact</a></li>
+<body class="no-js">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <div class="scroll-progress" aria-hidden="true">
+        <span class="scroll-progress__bar" id="scrollProgressBar"></span>
+    </div>
+
+    <header class="site-header" id="siteHeader">
+        <nav class="navbar container" aria-label="Main">
+            <a href="#home" class="logo">
+                <span class="logo__mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+                        <circle cx="9" cy="11" r="1" fill="currentColor" stroke="none" />
+                        <circle cx="15" cy="11" r="1" fill="currentColor" stroke="none" />
+                        <path d="M9.5 15.5c1.6 1 3.4 1 5 0" />
+                    </svg>
+                </span>
+                <span class="logo__text">FaceInsight<em>AI</em></span>
+            </a>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a class="nav-link" href="#home">Home</a></li>
+                <li><a class="nav-link" href="#features">Features</a></li>
+                <li><a class="nav-link" href="#about">How it works</a></li>
+                <li><a class="nav-link" href="#faq">FAQ</a></li>
+                <li><a class="nav-link" href="#contact">Contact</a></li>
             </ul>
 
-            <a href="#scanner" class="btn-scan">
-                Scan Now
-            </a>
+            <div class="nav-actions">
+                <a href="#scanner" class="btn btn--primary btn--sm btn-scan">
+                    <span>Scan now</span>
+                    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                </a>
+
+                <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false"
+                    aria-controls="navLinks" aria-label="Open navigation menu">
+                    <span class="nav-toggle__bars" aria-hidden="true">
+                        <span></span><span></span><span></span>
+                    </span>
+                </button>
+            </div>
         </nav>
     </header>
-    <main>
+
+    <main id="main">
         <section id="home" class="hero">
-            <div class="hero-content">
-                <h1>Unlock Your Best Potential With AI</h1>
-                <p>Upload a photo and let AI analyze your facial features, estimate your facial metrics, and receive
-                    personalized glow-up recommendations to improve your appearance.</p>
-                <div class="hero-buttons">
-                    <button class="primary-btn"><a href="#scanner">Scan your face now!</a></button>
-                    <button class="secondary-btn"><a href="#about">Lets see how it works</a></button>
+            <div class="hero__glow hero__glow--a" aria-hidden="true"></div>
+            <div class="hero__glow hero__glow--b" aria-hidden="true"></div>
+
+            <div class="hero__inner container">
+                <div class="hero__content" data-reveal>
+                    <span class="pill">
+                        <span class="pill__dot" aria-hidden="true"></span>
+                        Runs 100% on your device — nothing is uploaded
+                    </span>
+
+                    <h1 class="hero__title">
+                        Unlock your best
+                        <span class="hl">potential</span>
+                        with AI
+                    </h1>
+
+                    <p class="hero__lead">
+                        Drop in one photo and FaceInsight maps 478 facial landmarks, measures your
+                        symmetry and golden-ratio proportions, then hands you a personalised
+                        glow-up plan. All in your browser.
+                    </p>
+
+                    <div class="hero__actions">
+                        <a href="#scanner" class="btn btn--primary btn--lg">
+                            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path
+                                    d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z" />
+                                <circle cx="12" cy="13" r="3.4" />
+                            </svg>
+                            <span>Scan your face now</span>
+                        </a>
+                        <a href="#about" class="btn btn--ghost btn--lg">
+                            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M10 8.5l5.5 3.5L10 15.5z" />
+                            </svg>
+                            <span>See how it works</span>
+                        </a>
+                    </div>
+
+                    <dl class="hero__stats">
+                        <div class="stat">
+                            <dt>Landmarks</dt>
+                            <dd data-count="478">478</dd>
+                        </div>
+                        <div class="stat">
+                            <dt>Metrics scored</dt>
+                            <dd data-count="10">10</dd>
+                        </div>
+                        <div class="stat">
+                            <dt>Server uploads</dt>
+                            <dd data-count="0">0</dd>
+                        </div>
+                    </dl>
                 </div>
-            </div>
 
-            <div class="hero-image">
-
-                <div class="ai-card">
-                    <div class="card-header">
-                        <h3>🤖 FaceInsight AI</h3>
-                        <p>AI Face Analysis Preview</p>
-                    </div>
-
-                    <div class="score-box">
-                        <h2>91</h2>
-                        <span>Face Score</span>
-                    </div>
-
-                    <div class="metrics">
-
-                        <div class="metric">
-                            <span>Tier</span>
-                            <strong>Chadlite</strong>
+                <div class="hero__visual" data-reveal data-reveal-delay="120">
+                    <article class="ai-card" id="aiCard" aria-label="Live facial analysis preview">
+                        <div class="ai-card__scan">
+                            <svg class="face-mesh" viewBox="0 0 200 240" aria-hidden="true">
+                                <path class="face-mesh__outline"
+                                    d="M100 16c-32 0-58 24-58 56 0 18 2 32 6 44 6 19 22 40 44 52l8 4 8-4c22-12 38-33 44-52 4-12 6-26 6-44 0-32-26-56-58-56z" />
+                                <path class="face-mesh__line" d="M62 96c8-5 18-5 26 0M112 96c8-5 18-5 26 0" />
+                                <ellipse class="face-mesh__line" cx="75" cy="106" rx="12" ry="7" />
+                                <ellipse class="face-mesh__line" cx="125" cy="106" rx="12" ry="7" />
+                                <path class="face-mesh__line" d="M100 108v30c0 4-4 6-8 7" />
+                                <path class="face-mesh__line" d="M82 158c11 7 25 7 36 0" />
+                                <path class="face-mesh__line face-mesh__soft" d="M100 26v188" />
+                                <path class="face-mesh__line face-mesh__soft" d="M42 104h116" />
+                            </svg>
+                            <div class="face-mesh__points" id="faceMeshPoints" aria-hidden="true"></div>
+                            <span class="scan-line" aria-hidden="true"></span>
+                            <span class="scan-corner scan-corner--tl" aria-hidden="true"></span>
+                            <span class="scan-corner scan-corner--tr" aria-hidden="true"></span>
+                            <span class="scan-corner scan-corner--bl" aria-hidden="true"></span>
+                            <span class="scan-corner scan-corner--br" aria-hidden="true"></span>
+                            <span class="live-badge"><i aria-hidden="true"></i>Live demo</span>
                         </div>
 
-                        <div class="metric">
-                            <span>Symmetry</span>
-                            <strong>93%</strong>
+                        <div class="ai-card__head">
+                            <h3>FaceInsight AI</h3>
+                            <p id="heroScanLabel">Mapping landmarks…</p>
                         </div>
 
-                        <div class="metric">
-                            <span>Jawline</span>
-                            <strong>89%</strong>
+                        <div class="score-ring-row">
+                            <svg class="score-ring" viewBox="0 0 120 120" aria-hidden="true">
+                                <circle class="score-ring__track" cx="60" cy="60" r="52" />
+                                <circle class="score-ring__value" id="heroRing" cx="60" cy="60" r="52" />
+                            </svg>
+                            <div class="score-ring__label">
+                                <strong id="heroScore">0</strong>
+                                <span>Face score</span>
+                                <span class="tier tier--sm" id="heroTier">—</span>
+                            </div>
                         </div>
 
-                        <div class="metric">
-                            <span>Skin</span>
-                            <strong>94%</strong>
+                        <ul class="metrics" id="heroMetrics">
+                            <li class="metric" data-value="93">
+                                <div class="metric__top"><span>Symmetry</span><strong>93%</strong></div>
+                                <div class="metric__bar"><i></i></div>
+                            </li>
+                            <li class="metric" data-value="89">
+                                <div class="metric__top"><span>Jawline</span><strong>89%</strong></div>
+                                <div class="metric__bar"><i></i></div>
+                            </li>
+                            <li class="metric" data-value="94">
+                                <div class="metric__top"><span>Skin quality</span><strong>94%</strong></div>
+                                <div class="metric__bar"><i></i></div>
+                            </li>
+                            <li class="metric" data-value="91">
+                                <div class="metric__top"><span>Harmony</span><strong>91%</strong></div>
+                                <div class="metric__bar"><i></i></div>
+                            </li>
+                        </ul>
+
+                        <div class="ai-card__status">
+                            <div class="bar bar--striped"><i id="heroBar"></i></div>
+                            <p id="heroStatus">Running on-device model…</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <div class="marquee" aria-hidden="true">
+                <div class="marquee__track">
+                    <span>Symmetry</span><span>Golden ratio</span><span>Eye area</span><span>Jawline</span>
+                    <span>Face shape</span><span>Skin quality</span><span>Facial harmony</span><span>Potential</span>
+                    <span>Symmetry</span><span>Golden ratio</span><span>Eye area</span><span>Jawline</span>
+                    <span>Face shape</span><span>Skin quality</span><span>Facial harmony</span><span>Potential</span>
+                </div>
+            </div>
+        </section>
+<section id="features" class="section features">
+            <div class="container">
+                <header class="section-head" data-reveal>
+                    <span class="eyebrow">Why FaceInsight</span>
+                    <h2>Built to actually <span class="hl">explain your face</span></h2>
+                    <p>
+                        Not a black box. Every score comes from measurable geometry you can trace
+                        back to a landmark on your photo.
+                    </p>
+                </header>
+
+                <div class="feature-grid">
+                    <article class="feature-card spotlight" data-reveal data-reveal-delay="0">
+                        <span class="feature-card__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.2a1 1 0 0 0 .9-.55l.6-1.2A1 1 0 0 1 9.1 3.7h5.8a1 1 0 0 1 .9.55l.6 1.2a1 1 0 0 0 .9.55h1.2A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z" />
+                                <circle cx="12" cy="12.4" r="3.6" />
+                            </svg>
+                        </span>
+                        <h3>Face scanner</h3>
+                        <p>Upload a photo and MediaPipe instantly locks 478 landmarks onto your face — no account, no server.</p>
+                        <span class="feature-card__tag">MediaPipe FaceLandmarker</span>
+                    </article>
+
+                    <article class="feature-card spotlight" data-reveal data-reveal-delay="80">
+                        <span class="feature-card__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="7" y="7" width="10" height="10" rx="2.5" />
+                                <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l1.6 1.6M16.4 16.4L18 18M18 6l-1.6 1.6M7.6 16.4L6 18" />
+                            </svg>
+                        </span>
+                        <h3>Geometric analysis</h3>
+                        <p>Symmetry, golden-ratio proportions, facial harmony, a full eye-area composite and jawline — each one scored and explained.</p>
+                        <span class="feature-card__tag">10 scored metrics</span>
+                    </article>
+
+                    <article class="feature-card spotlight" data-reveal data-reveal-delay="160">
+                        <span class="feature-card__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
+                                <path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" />
+                            </svg>
+                        </span>
+                        <h3>Glow-up plan</h3>
+                        <p>Get concrete next steps tuned to your tier and detected gender — skincare, grooming, posture, sleep.</p>
+                        <span class="feature-card__tag">Personalised tips</span>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="section how-it-works">
+            <div class="container">
+                <header class="section-head" data-reveal>
+                    <span class="eyebrow">How it works</span>
+                    <h2>Three steps, <span class="hl">about ten seconds</span></h2>
+                    <p>Everything happens locally in your browser tab.</p>
+                </header>
+
+                <ol class="steps">
+                    <li class="step" data-reveal data-reveal-delay="0">
+                        <span class="step__number">01</span>
+                        <span class="step__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 16V4M7.5 8.5L12 4l4.5 4.5" />
+                                <path d="M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
+                            </svg>
+                        </span>
+                        <h3>Upload a photo</h3>
+                        <p>Use a sharp, well-lit, front-facing shot. Drag & drop it or click to browse.</p>
+                    </li>
+
+                    <li class="steps__connector" aria-hidden="true"></li>
+
+                    <li class="step" data-reveal data-reveal-delay="80">
+                        <span class="step__number">02</span>
+                        <span class="step__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="4" y="4" width="16" height="16" rx="4" />
+                                <circle cx="10" cy="11" r="1.2" fill="currentColor" stroke="none" />
+                                <circle cx="14" cy="11" r="1.2" fill="currentColor" stroke="none" />
+                                <path d="M9.5 15c1.5 1 3.5 1 5 0M12 8v1" />
+                            </svg>
+                        </span>
+                        <h3>AI maps your face</h3>
+                        <p>Landmarks are detected and the geometry is measured in real time on your device.</p>
+                    </li>
+
+                    <li class="steps__connector" aria-hidden="true"></li>
+
+                    <li class="step" data-reveal data-reveal-delay="160">
+                        <span class="step__number">03</span>
+                        <span class="step__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+                            </svg>
+                        </span>
+                        <h3>Read your report</h3>
+                        <p>Scores, a tier verdict and a breakdown of exactly what to work on first.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section class="section report" id="report">
+            <div class="container">
+                <header class="section-head" data-reveal>
+                    <span class="eyebrow">What you get</span>
+                    <h2>A report that reads like a <span class="hl">checklist</span></h2>
+                    <p>Tap any metric to see what it actually measures.</p>
+                </header>
+
+                <div class="report__card" data-reveal>
+                    <div class="report__summary">
+                        <div class="report__ring">
+                            <svg viewBox="0 0 140 140" aria-hidden="true">
+                                <circle class="report-ring__track" cx="70" cy="70" r="60" />
+                                <circle class="report-ring__value" id="reportRing" cx="70" cy="70" r="60" />
+                            </svg>
+                            <div class="report__ring-label">
+                                <strong id="overall-score">0 / 10</strong>
+                                <span>Overall</span>
+                            </div>
                         </div>
 
+                        <div class="report__verdict">
+                            <span class="eyebrow eyebrow--sm">AI verdict</span>
+                            <span class="tier tier--demo">Example tier</span>
+                            <p>Example output. Run a real scan below to get your own numbers.</p>
+                            <p class="report__potential-note">Every scan also reports your eye-area composite, a reliability check on the photo, and the tier you could realistically reach.</p>
+                        </div>
                     </div>
 
-                    <div class="status">
-                        <div class="loading-bar"></div>
-                        <p>AI Analyzing...</p>
-                    </div>
-
+                    <ul class="report__list" id="reportList">
+                        <li class="report-row" data-fill="78" tabindex="0" role="button" aria-expanded="false">
+                            <div class="report-row__head">
+                                <span class="report-row__name">Face shape</span>
+                                <span class="report-row__value">Oval</span>
+                            </div>
+                            <div class="report-row__bar"><i></i></div>
+                            <p class="report-row__desc">Ratio of face length to bizygomatic width. Oval sits in the most balanced band.</p>
+                        </li>
+                        <li class="report-row" data-fill="91" tabindex="0" role="button" aria-expanded="false">
+                            <div class="report-row__head">
+                                <span class="report-row__name">Facial harmony</span>
+                                <span class="report-row__value">91%</span>
+                            </div>
+                            <div class="report-row__bar"><i></i></div>
+                            <p class="report-row__desc">How closely your feature spacing sits to the golden-ratio ideal across the face.</p>
+                        </li>
+                        <li class="report-row" data-fill="94" tabindex="0" role="button" aria-expanded="false">
+                            <div class="report-row__head">
+                                <span class="report-row__name">Symmetry</span>
+                                <span class="report-row__value">94%</span>
+                            </div>
+                            <div class="report-row__bar"><i></i></div>
+                            <p class="report-row__desc">Mirror-distance between paired landmarks, averaged across eyes, brows, cheeks and jaw.</p>
+                        </li>
+                        <li class="report-row" data-fill="86" tabindex="0" role="button" aria-expanded="false">
+                            <div class="report-row__head">
+                                <span class="report-row__name">Jawline</span>
+                                <span class="report-row__value">Strong</span>
+                            </div>
+                            <div class="report-row__bar"><i></i></div>
+                            <p class="report-row__desc">Gonial angle sharpness and jaw-to-cheekbone width balance.</p>
+                        </li>
+                        <li class="report-row" data-fill="72" tabindex="0" role="button" aria-expanded="false">
+                            <div class="report-row__head">
+                                <span class="report-row__name">Canthal tilt</span>
+                                <span class="report-row__value">Positive</span>
+                            </div>
+                            <div class="report-row__bar"><i></i></div>
+                            <p class="report-row__desc">Angle between the inner and outer eye corners. Positive means outer corners sit higher.</p>
+                        </li>
+                        <li class="report-row" data-fill="87" tabindex="0" role="button" aria-expanded="false">
+                            <div class="report-row__head">
+                                <span class="report-row__name">Skin quality</span>
+                                <span class="report-row__value">87%</span>
+                            </div>
+                            <div class="report-row__bar"><i></i></div>
+                            <p class="report-row__desc">Local texture variance sampled on both cheeks — lower variance reads as smoother skin.</p>
+                        </li>
+                    </ul>
                 </div>
-
             </div>
-
-            </div>
-
-
-
         </section>
-        <section id="features" class="features">
+<section class="section scanner" id="scanner">
+            <div class="container">
+                <header class="section-head" data-reveal>
+                    <span class="eyebrow">The scanner</span>
+                    <h2>Start your <span class="hl">face analysis</span></h2>
+                    <p>Upload a front photo to get your score and tier. Add a side photo to unlock the full profile analysis. Nothing leaves your device.</p>
+                </header>
 
-            <div class="section-title fade-up">
+                <div class="scanner__layout">
+                    <div class="upload-stack" id="uploadStack">
+                        <div class="photo-slots">
+                            <!-- SLOT 1: FRONT. Required. This is the ONLY photo that
+                                 produces a score and a tier. -->
+                            <div class="photo-slot photo-slot--front" id="frontSlot">
+                                <span class="photo-slot__tag">
+                                    <b>1</b> Front photo
+                                    <em>required · this sets your tier</em>
+                                </span>
+                                <label for="imageInput" class="upload-box" id="uploadBox" tabindex="0">
+                                    <input type="file" id="imageInput" accept="image/*">
 
-                <h2>Why FaceInsight AI?</h2>
+                                    <div class="upload-empty hide-content">
+                                        <span class="upload-icon-ring" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M12 16V5M7.5 9.5L12 5l4.5 4.5" />
+                                                <path d="M4.5 15v3A2 2 0 0 0 6.5 20h11a2 2 0 0 0 2-2v-3" />
+                                            </svg>
+                                        </span>
+                                        <h3 class="upload-title">Drop your front photo</h3>
+                                        <p class="upload-text">or <span class="upload-link">click to browse</span></p>
+                                        <p class="upload-hint">JPG or PNG · facing the camera · even lighting</p>
+                                    </div>
 
-                <p>
-                    Advanced AI-powered facial analysis designed to provide personalized
-                    insights and glow-up recommendations.
-                </p>
+                                    <div class="upload-preview">
+                                        <img id="preview" src="" alt="">
+                                        <canvas id="landmarkCanvas" class="landmark-canvas"></canvas>
+                                        <div id="photoScanOverlay" class="photo-scan-overlay hidden">
+                                            <!-- Face-scan effect: a moving mesh grid, a bright
+                                                 sweeping beam, corner brackets and a live
+                                                 read-out. Purely decorative (aria-hidden);
+                                                 the real progress lives in the loading bar. -->
+                                            <span class="scan-mesh" aria-hidden="true"></span>
+                                            <span class="scan-line" aria-hidden="true"></span>
+                                            <span class="scan-corner scan-corner--tl" aria-hidden="true"></span>
+                                            <span class="scan-corner scan-corner--tr" aria-hidden="true"></span>
+                                            <span class="scan-corner scan-corner--bl" aria-hidden="true"></span>
+                                            <span class="scan-corner scan-corner--br" aria-hidden="true"></span>
+                                            <span class="photo-scan-badge" id="photoScanBadge">Scanning landmarks...</span>
+                                            <span class="photo-scan-readout" aria-hidden="true">
+                                                <i class="photo-scan-readout__dot"></i>478-point mesh · on-device
+                                            </span>
+                                        </div>
+                                        <div class="upload-preview__meta">
+                                            <span class="upload-file" id="fileName"></span>
+                                            <button type="button" class="icon-btn" id="clearImage"
+                                                aria-label="Remove the front photo">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                    <path d="M6 6l12 12M18 6L6 18" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
 
-            </div>
+                                    <span class="drop-overlay" aria-hidden="true">
+                                        <span class="drop-overlay__pill">Release to load</span>
+                                    </span>
+                                </label>
+                            </div>
 
-            <div class="feature-grid">
+                            <!-- SLOT 2: SIDE. Optional. Produces the profile report,
+                                 never a tier. -->
+                            <div class="photo-slot photo-slot--side" id="sideSlot">
+                                <span class="photo-slot__tag">
+                                    <b>2</b> Side photo
+                                    <em>optional · unlocks the profile report</em>
+                                </span>
+                                <!-- Shown ONLY when a side photo is loaded and no front
+                                     photo exists (see updateSideOnlyGuard in main.js).
+                                     A side profile cannot be rated, so this hands the user
+                                     the one action that unblocks them. -->
+                                <button type="button" class="side-needs-front" id="sideNeedsFront" hidden>
+                                    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M12 19V5M5.5 11.5L12 5l6.5 6.5" />
+                                    </svg>
+                                    <span>This photo can't be rated on its own — <b>add a front photo first</b></span>
+                                </button>
 
-                <div class="feature-card fade-up">
+                                <label for="sideImageInput" class="upload-box upload-box--side" id="sideUploadBox" tabindex="0">
+                                    <input type="file" id="sideImageInput" accept="image/*">
 
-                    <div class="icon">📷</div>
+                                    <div class="upload-empty hide-content">
+                                        <span class="upload-icon-ring" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M12 16V5M7.5 9.5L12 5l4.5 4.5" />
+                                                <path d="M4.5 15v3A2 2 0 0 0 6.5 20h11a2 2 0 0 0 2-2v-3" />
+                                            </svg>
+                                        </span>
+                                        <h3 class="upload-title">Drop your side photo</h3>
+                                        <p class="upload-text">or <span class="upload-link">click to browse</span></p>
+                                        <p class="upload-hint">Head turned ~90° · nose in profile</p>
+                                    </div>
 
-                    <h3>Face Scanner</h3>
+                                    <div class="upload-preview">
+                                        <img id="sidePreview" src="" alt="">
 
-                    <p>
-                        Upload your photo and let AI detect facial landmarks.
-                    </p>
+                                        <!-- Side-profile scan effect. Mirrors the front slot's
+                                             overlay (mesh, sweeping beam, brackets, read-out)
+                                             but in the violet/indigo the palette reserves for
+                                             the side pass, and with a VERTICAL sweep -- a
+                                             profile is read top-to-bottom (forehead -> brow ->
+                                             nose -> jaw -> chin), so a beam travelling across
+                                             the face would point at the wrong axis. -->
+                                        <div id="sideScanOverlay" class="photo-scan-overlay photo-scan-overlay--side hidden">
+                                            <span class="scan-mesh scan-mesh--side" aria-hidden="true"></span>
+                                            <span class="scan-line scan-line--side" aria-hidden="true"></span>
+                                            <span class="scan-rail" aria-hidden="true">
+                                                <i class="scan-rail__point"></i>
+                                                <i class="scan-rail__point"></i>
+                                                <i class="scan-rail__point"></i>
+                                                <i class="scan-rail__point"></i>
+                                                <i class="scan-rail__point"></i>
+                                            </span>
+                                            <span class="scan-corner scan-corner--tl" aria-hidden="true"></span>
+                                            <span class="scan-corner scan-corner--tr" aria-hidden="true"></span>
+                                            <span class="scan-corner scan-corner--bl" aria-hidden="true"></span>
+                                            <span class="scan-corner scan-corner--br" aria-hidden="true"></span>
+                                            <span class="photo-scan-badge" id="sideScanBadge">Reading profile line...</span>
+                                            <span class="photo-scan-readout" aria-hidden="true">
+                                                <i class="photo-scan-readout__dot"></i>gonial · ramus · mandible
+                                            </span>
+                                        </div>
 
-                </div>
+                                        <div class="upload-preview__meta">
+                                            <span class="upload-file" id="sideFileName"></span>
+                                            <button type="button" class="icon-btn" id="clearSideImage"
+                                                aria-label="Remove the side photo">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                    <path d="M6 6l12 12M18 6L6 18" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
 
-                <div class="feature-card fade-up">
+                                    <span class="drop-overlay" aria-hidden="true">
+                                        <span class="drop-overlay__pill">Release to load</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
 
-                    <div class="icon">🤖</div>
+                        <div class="upload-actions">
+                            <button id="analyze-btn" class="btn btn--primary btn--lg" type="button" disabled>
+                                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+                                    <circle cx="12" cy="12" r="4.2" />
+                                </svg>
+                                <span>Analyze my face</span>
+                            </button>
+                            <button id="resetBtn" class="btn btn--ghost btn--lg" type="button" hidden>
+                                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M4 12a8 8 0 1 0 2.6-5.9" />
+                                    <path d="M4 4v4h4" />
+                                </svg>
+                                <span>Reset</span>
+                            </button>
+                        </div>
 
-                    <h3>AI Analysis</h3>
+                        <div id="loading" class="scan-loading" aria-hidden="true">
+                            <div class="bar"><i class="progress"></i></div>
+                            <p id="loading-text">0%</p>
+                            <span class="scan-loading__spinner" aria-hidden="true"></span>
+                        </div>
 
-                    <p>
-                        Analyze facial harmony, symmetry, jawline and skin quality.
-                    </p>
+                        <p id="scan-status" class="scan-status" role="status" aria-live="polite"></p>
 
-                </div>
-
-                <div class="feature-card fade-up">
-
-                    <div class="icon">✨</div>
-
-                    <h3>Glow Up Tips</h3>
-
-                    <p>
-                        Receive personalized recommendations to improve your appearance.
-                    </p>
-
-                </div>
-
-            </div>
-
-        </section>
-        <section class="how-it-works" id="about">
-
-            <h2>How It Works</h2>
-
-            <p>
-                Analyze your face in three simple steps.
-            </p>
-
-            <div class="steps">
-
-                <div class="step">
-
-                    <div class="step-number">1</div>
-
-                    <div class="step-icon">📤</div>
-
-                    <h3>Upload Photo</h3>
-
-                    <p>
-                        Upload a clear front-facing image.
-                    </p>
-
-                </div>
-
-                <div class="line"></div>
-
-                <div class="step">
-
-                    <div class="step-number">2</div>
-
-                    <div class="step-icon">🤖</div>
-
-                    <h3>AI Analysis</h3>
-
-                    <p>
-                        Our AI detects facial landmarks and symmetry.
-                    </p>
-
-                </div>
-
-                <div class="line"></div>
-
-                <div class="step">
-
-                    <div class="step-number">3</div>
-
-                    <div class="step-icon">📊</div>
-
-                    <h3>Get Report</h3>
-
-                    <p>
-                        Receive your facial analysis instantly.
-                    </p>
-
-                </div>
-
-            </div>
-
-        </section>
-        <section class="advanced-report">
-
-            <h2>Advanced Face Analysis</h2>
-
-            <div class="analysis-card">
-
-                <div class="analysis-score">
-
-                    <h3>Overall Score</h3>
-
-                    <span id="overall-score">9.4 / 10</span>
-
-                </div>
-
-                <div class="analysis-grid">
-
-                    <div>
-                        <h4>Face Shape</h4>
-                        <p>Oval</p>
+                        <div class="privacy-note">
+                            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2" />
+                                <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+                            </svg>
+                            <span>Your photo is processed in this tab and never sent anywhere.</span>
+                        </div>
                     </div>
 
-                    <div>
-                        <h4>Harmony</h4>
-                        <p>91%</p>
-                    </div>
+                    <div id="scanResults" class="scan-results hidden">
+                        <!-- ===== 1. VERDICT. The single merged result. Tier and
+                             score come from the front photo (the authority); a
+                             strong side profile can nudge the score upward, which
+                             is stated right here when it happens. ===== -->
+                        <section class="verdict">
+                            <div class="verdict__glow" aria-hidden="true"></div>
+                            <div class="verdict__head">
+                                <span class="verdict__eyebrow">Combined verdict</span>
+                                <span id="scanSources" class="verdict__sources">Front photo</span>
+                            </div>
 
-                    <div>
-                        <h4>Symmetry</h4>
-                        <p>94%</p>
-                    </div>
+                            <div class="verdict__main">
+                                <div class="verdict__ring">
+                                    <svg viewBox="0 0 140 140" aria-hidden="true">
+                                        <circle class="verdict-ring__track" cx="70" cy="70" r="62" />
+                                        <circle class="verdict-ring__value" id="scanVerdictRing" cx="70" cy="70" r="62" />
+                                    </svg>
+                                    <div class="verdict__ring-label">
+                                        <strong id="scanOverallScore">--</strong>
+                                        <span>out of 10</span>
+                                    </div>
+                                </div>
 
-                    <div>
-                        <h4>Jawline</h4>
-                        <p>Strong</p>
-                    </div>
+                                <div class="verdict__text">
+                                    <span id="scanTier" class="verdict__tier"></span>
+                                    <p id="scanVerdictNote" class="verdict__note">
+                                        --
+                                    </p>
+                                </div>
+                            </div>
 
-                    <div>
-                        <h4>Canthal Tilt</h4>
-                        <p>Positive</p>
-                    </div>
+                            <div id="scanOverallScale" class="scale-mount scale-mount-big"></div>
+                        </section>
 
-                    <div>
-                        <h4>Skin Quality</h4>
-                        <p>87%</p>
-                    </div>
+                        <!-- ===== 2. SIDE-PROFILE DETAIL =================================
+                             Placed directly under the verdict, NOT at the bottom of
+                             the report. The profile readings are the ones a user
+                             came to this section to compare against their front
+                             result, so burying them below tips and scan-quality
+                             meant scrolling past everything to reach them.
+                             Hidden entirely when no side photo was scanned, so a
+                             front-only result stays clean. ===== -->
+                        <section id="scanSideProfilePanel" class="scan-side hidden">
+                            <div class="scan-section-head">
+                                <span class="scan-section-head__kicker scan-section-head__kicker--side">Side view</span>
+                                <h3>Profile &amp; jaw structure</h3>
+                                <span id="scanSideConfidence" class="scan-side__badge"></span>
+                            </div>
+                            <p class="scan-side__hint" id="scanSideHint">
+                                The angles a front photo can't see. Gonial angle is the jaw-corner
+                                angle (smaller = sharper); ramus is the height of the vertical jaw
+                                branch; mandible is the jaw body length; eye projection is how far the
+                                eye sits ahead of (prominent) or behind (deep-set) the brow.
+                            </p>
+                            <div class="scan-side-grid">
+                                <div class="scan-side-item">
+                                    <span class="scan-side-item__label">Gonial angle</span>
+                                    <span id="scanSideGonial" class="scan-side-item__value">--</span>
+                                </div>
+                                <div class="scan-side-item">
+                                    <span class="scan-side-item__label">Ramus</span>
+                                    <span id="scanSideRamus" class="scan-side-item__value">--</span>
+                                </div>
+                                <div class="scan-side-item">
+                                    <span class="scan-side-item__label">Mandible</span>
+                                    <span id="scanSideMandible" class="scan-side-item__value">--</span>
+                                </div>
+                                <div class="scan-side-item">
+                                    <span class="scan-side-item__label">Eye projection</span>
+                                    <span id="scanSideEyeProjection" class="scan-side-item__value">--</span>
+                                </div>
+                                <div class="scan-side-item">
+                                    <span class="scan-side-item__label">Nose</span>
+                                    <span id="scanSideNose" class="scan-side-item__value">--</span>
+                                </div>
+                                <div class="scan-side-item">
+                                    <span class="scan-side-item__label">Profile line</span>
+                                    <span id="scanSideProfileType" class="scan-side-item__value">--</span>
+                                </div>
+                            </div>
 
-                </div>
+                            <!-- How this side photo affected the verdict. Folded in
+                                 here rather than shown as a second side-view panel:
+                                 it is the SAME photo described again, so one
+                                 section holding both the readings and their effect
+                                 on the score reads as one story instead of two. -->
+                            <div id="scanMergePanel" class="scan-merge hidden">
+                                <div class="merge__head">
+                                    <span class="merge__badge">Effect on score</span>
+                                    <span id="scanMergeTier" class="merge__tier">--</span>
+                                </div>
+                                <p id="scanMergeNote" class="merge__note">--</p>
+                                <div class="merge__bars">
+                                    <div class="merge-bar">
+                                        <span class="merge-bar__label">Gonial angle <em id="scanMergeGonial">--</em></span>
+                                        <span class="merge-bar__track"><i id="scanMergeGonialBar"></i></span>
+                                    </div>
+                                    <div class="merge-bar">
+                                        <span class="merge-bar__label">Mandible <em id="scanMergeMandible">--</em></span>
+                                        <span class="merge-bar__track"><i id="scanMergeMandibleBar"></i></span>
+                                    </div>
+                                    <div class="merge-bar">
+                                        <span class="merge-bar__label">Ramus <em id="scanMergeRamus">--</em></span>
+                                        <span class="merge-bar__track"><i id="scanMergeRamusBar"></i></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
 
-                <div class="verdict">
+                        <!-- (The old standalone "side photo" merge panel lived here.
+                             It is now folded INTO the Profile & jaw structure
+                             section above -- see the scan-merge block inside it.
+                             Having two separate side-view blocks was the
+                             "berantakan" duplication: one held the raw angles and
+                             the other the contribution, describing the same photo
+                             twice.) -->
 
-                    <h3>AI Verdict</h3>
+                        <!-- ===== 3. FRONT-PHOTO METRICS ===== -->
+                        <div class="scan-section-head">
+                            <span class="scan-section-head__kicker">Front view</span>
+                            <h3>Shape &amp; proportion</h3>
+                        </div>
 
-                    <span class="tier">🟢 Adam Tier</span>
+                        <div class="scan-grid">
+                            <div class="scan-card">
+                                <h4>Symmetry</h4>
+                                <div id="scanSymmetryScore" class="scan-score-sm">--</div>
+                                <p id="scanSymmetryWhy" class="scan-why">--</p>
+                                <div id="scanSymmetryScale" class="scale-mount"></div>
+                            </div>
+                            <div class="scan-card">
+                                <h4>Golden ratio</h4>
+                                <div id="scanGoldenScore" class="scan-score-sm">--</div>
+                                <p id="scanGoldenWhy" class="scan-why">--</p>
+                                <div id="scanGoldenScale" class="scale-mount"></div>
+                            </div>
+                        </div>
 
-                </div>
+                        <div class="scan-section-head scan-section-head--tight">
+                            <span class="scan-section-head__kicker">Front view</span>
+                            <h3>Features &amp; skin</h3>
+                        </div>
 
-            </div>
+                        <div class="scan-detail-grid">
+                            <div class="scan-detail-card">
+                                <h4>Face shape</h4>
+                                <p id="scanFaceShape">--</p>
+                            </div>
+                            <div class="scan-detail-card">
+                                <h4>Canthal tilt</h4>
+                                <p id="scanCanthalTilt">--</p>
+                            </div>
+                            <div class="scan-detail-card">
+                                <h4>Facial harmony</h4>
+                                <p id="scanHarmony">--</p>
+                            </div>
+                            <div class="scan-detail-card">
+                                <h4>Skin quality</h4>
+                                <p id="scanSkinQuality">--</p>
+                            </div>
+                            <div class="scan-detail-card">
+                                <h4>Skin clarity</h4>
+                                <p id="scanSkinAcne">--</p>
+                            </div>
+                            <div class="scan-detail-card">
+                                <h4>Eye shape</h4>
+                                <p id="scanEyeShape">--</p>
+                            </div>
+                            <!-- The two evidence cards are LAST so the six compact
+                                 cards tile as a clean 3 + 3 above them, and the two
+                                 wide cards then tile as 2. Putting Eye shape after
+                                 them left a single card stranded on a fourth row. -->
+                            <div class="scan-detail-card scan-detail-card--wide">
+                                <h4>Face fat</h4>
+                                <p id="scanFaceFat">--</p>
+                                <p id="scanFaceFatWhy" class="scan-why">--</p>
+                            </div>
+                            <div class="scan-detail-card scan-detail-card--wide">
+                                <h4>Jawline</h4>
+                                <p id="scanJawline">--</p>
+                                <p id="scanJawlineWhy" class="scan-why">--</p>
+                            </div>
+                        </div>
 
-        </section>
-        <section class="scanner" id="scanner">
-            <div class="section-title">
-                <h2 class="fade-up">Start Your Face Analysis</h2>
+                        <section class="scan-eye" id="scanEyePanel">
+                            <div class="scan-section-head scan-section-head--tight">
+                                <span class="scan-section-head__kicker">Front view · detail</span>
+                                <h3>Eye area</h3>
+                            </div>
+                            <div class="scan-eye__head">
+                                <h4>Composite score</h4>
+                                <span id="scanEyeAreaValue" class="scan-eye__badge">--</span>
+                            </div>
+                            <p id="scanEyeAreaWhy" class="scan-why scan-why--eye">--</p>
+                            <p class="scan-eye__hint">
+                                The eye area is a composite, not one number. Each scored part below
+                                is weighted as labelled and shown with its own reading, so you can
+                                see exactly which one is carrying the score and which is holding it
+                                back. The "Eye shape" card above names the eye's proportions;
+                                this panel scores the whole area including the brow and spacing.
+                            </p>
+                            <div class="scan-eye-grid">
+                                <div class="scan-eye-item">
+                                    <span class="scan-eye-item__label">Canthal tilt <em>·30%</em></span>
+                                    <span id="scanEyeCanthal" class="scan-eye-item__value">--</span>
+                                    <span class="scan-eye-item__bar"><i id="scanEyeCanthalBar"></i></span>
+                                </div>
+                                <div class="scan-eye-item">
+                                    <span class="scan-eye-item__label">Projection <em>·25%</em></span>
+                                    <span id="scanEyeProjection" class="scan-eye-item__value">--</span>
+                                    <span class="scan-eye-item__bar"><i id="scanEyeProjectionBar"></i></span>
+                                </div>
+                                <div class="scan-eye-item">
+                                    <span class="scan-eye-item__label">Eyelid exposure <em>·25%</em></span>
+                                    <span id="scanEyeEyelid" class="scan-eye-item__value">--</span>
+                                    <span class="scan-eye-item__bar"><i id="scanEyeEyelidBar"></i></span>
+                                </div>
+                                <div class="scan-eye-item">
+                                    <span class="scan-eye-item__label">Brow &amp; spacing <em>·20%</em></span>
+                                    <span id="scanEyeBrow" class="scan-eye-item__value">--</span>
+                                    <span class="scan-eye-item__bar"><i id="scanEyeBrowBar"></i></span>
+                                </div>
+                            </div>
+                            <div class="scan-eye__metrics">
+                                <span class="scan-eye-metric">Eyelid crease: <b id="scanEyeLidExposure">--</b></span>
+                                <span class="scan-eye-metric">Scleral show: <b id="scanEyeScleral">--</b></span>
+                                <span class="scan-eye-metric">Intercanthal ratio: <b id="scanEyeIntercanthal">--</b></span>
+                                <span class="scan-eye-metric">Brow–eye distance: <b id="scanEyeBrowDist">--</b></span>
+                            </div>
+                        </section>
 
-                <p class="fade-up">
-                    Upload a clear front-facing photo and let FaceInsight AI
-                    analyze your facial features.
-                </p>
-            </div>
-            <div class="upload-container">
+                        <div class="scan-section-head scan-section-head--tight">
+                            <span class="scan-section-head__kicker">Projection</span>
+                            <h3>Your potential &amp; strengths</h3>
+                        </div>
 
-                <label for="imageInput" class="upload-box fade-up">
+                        <!-- Two cards side by side, the way Symmetry / Golden ratio sit
+                             together above. Potential is the orange "where you can go"
+                             card; Strengths is the teal "what already works" card, with a
+                             deliberately different card treatment so the two never read
+                             as the same thing. -->
+                        <div class="scan-pair">
+                            <section class="scan-potential">
+                                <div class="scan-potential__head">
+                                    <h4>Ceiling projection</h4>
+                                    <span id="scanPotentialTier" class="scan-potential__tier">--</span>
+                                </div>
+                                <div class="scan-potential__line">
+                                    <div class="scan-potential__score">
+                                        <strong id="scanPotentialScore">--</strong>
+                                        <span>headroom</span>
+                                    </div>
+                                    <p id="scanPotentialNote" class="scan-potential__note">
+                                        --
+                                    </p>
+                                </div>
+                                <p class="scan-potential__hint">
+                                    Potential is your current score plus the headroom in the metrics you can
+                                    actually change — skin, face fat, jaw definition and eyelid exposure. Bone
+                                    geometry sets the ceiling, not the potential: it is why a well-proportioned
+                                    but currently soft face has more room to climb than a defined but poorly
+                                    proportioned one.
+                                </p>
+                            </section>
 
-                    <input type="file" id="imageInput">
+                            <section class="scan-strength" id="scanStrengthPanel">
+                                <div class="scan-strength__head">
+                                    <h4>Your strengths</h4>
+                                    <span id="scanStrengthCount" class="scan-strength__count">--</span>
+                                </div>
+                                <p class="scan-strength__lead">
+                                    The four features on your face that scored highest for you — the
+                                    strengths to lean on.
+                                </p>
+                                <ul id="scanStrengthList" class="scan-strength__list">
+                                    <!-- Filled by main.js from the live analysis. -->
+                                </ul>
+                            </section>
+                        </div>
 
-                    <img id="preview" src="" alt="Preview">
+                        <div id="scanQualityPanel" class="scan-quality">
+                            <div class="scan-quality__head">
+                                <h4>Scan reliability</h4>
+                                <span id="scanReliabilityBadge" class="scan-quality__badge">--</span>
+                            </div>
+                            <ul class="scan-quality__list">
+                                <li class="scan-quality-item">
+                                    <span class="scan-quality-item__label">Landmark confidence</span>
+                                    <span id="scanConfidence" class="scan-quality-item__value">--</span>
+                                </li>
+                                <li class="scan-quality-item">
+                                    <span class="scan-quality-item__label">Lighting quality</span>
+                                    <span id="scanLighting" class="scan-quality-item__value">--</span>
+                                </li>
+                                <li class="scan-quality-item">
+                                    <span class="scan-quality-item__label">Image sharpness</span>
+                                    <span id="scanSharpness" class="scan-quality-item__value">--</span>
+                                </li>
+                                <li class="scan-quality-item">
+                                    <span class="scan-quality-item__label">Front-photo angle</span>
+                                    <span id="scanProfile" class="scan-quality-item__value">--</span>
+                                </li>
+                                <li class="scan-quality-item">
+                                    <span class="scan-quality-item__label">Head pose (3D)</span>
+                                    <span id="scanHeadPose" class="scan-quality-item__value">--</span>
+                                </li>
+                                <li class="scan-quality-item">
+                                    <span class="scan-quality-item__label">Iris tracking</span>
+                                    <span id="scanIris" class="scan-quality-item__value">--</span>
+                                </li>
+                            </ul>
+                            <p id="scanQualityNote" class="scan-quality__note">--</p>
+                        </div>
 
-                    <button id="analyze-btn">
-                        Analyze My Face
-                    </button>
+                        <div class="scan-tips">
+                            <h4 id="scanTipsHeading">Glow up tips</h4>
+                            <ul id="scanTipsList" class="scan-tips-list"></ul>
+                        </div>
 
-                    <div class="hide-content">
-
-                        <p class="upload-icon">📷</p>
-
-                        <h3 class="upload-title">
-                            Drag & Drop Your Image
-                        </h3>
-
-                        <p class="upload-text">
-                            or click to browse
+                        <p class="scan-disclaimer">
+                            Computed live from your face's landmarks, on-device (nothing is uploaded).
+                            Geometry-based fun scores, not a medical or scientific attractiveness measurement.
                         </p>
-
                     </div>
-
-                </label>
-                <div id="loading">
-
-
-                    <div class="loading-bar">
-
-                        <div class="progress"></div>
-
-                    </div>
-
-                    <p id="loading-text">0%</p>
-
                 </div>
-
-                <p id="scan-status" class="scan-status"></p>
-
-                <div id="scanResults" class="scan-results hidden">
-
-                    <div class="scan-card scan-card-highlight">
-                        <h4>Your Overall Score</h4>
-                        <div id="scanOverallScore" class="scan-score">--</div>
-                        <span id="scanTier" class="tier"></span>
-                        <div id="scanOverallScale" class="scale-mount scale-mount-big"></div>
-                    </div>
-
-                    <div class="scan-grid">
-                        <div class="scan-card">
-                            <h4>Symmetry</h4>
-                            <div id="scanSymmetryScore" class="scan-score-sm">--</div>
-                            <div id="scanSymmetryScale" class="scale-mount"></div>
-                        </div>
-                        <div class="scan-card">
-                            <h4>Golden Ratio</h4>
-                            <div id="scanGoldenScore" class="scan-score-sm">--</div>
-                            <div id="scanGoldenScale" class="scale-mount"></div>
-                        </div>
-                    </div>
-
-                    <p class="scan-disclaimer">
-                        Computed live from your face's landmarks, on-device (nothing is uploaded).
-                        Geometry-based fun scores, not a medical or scientific attractiveness measurement.
-                    </p>
-                </div>
-
             </div>
-
         </section>
-        <section class="faq" id="faq">
 
-            <h2>Frequently Asked Questions</h2>
+        <section class="section faq" id="faq">
+            <div class="container container--narrow">
+                <header class="section-head" data-reveal>
+                    <span class="eyebrow">FAQ</span>
+                    <h2>Questions, <span class="hl">answered</span></h2>
+                </header>
 
-            <div class="faq-item">
+                <div class="faq-list" data-reveal>
+                    <div class="faq-item">
+                        <button class="faq-question" type="button" aria-expanded="false">
+                            <span>Is my photo stored anywhere?</span>
+                            <span class="faq-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer__inner">
+                                <p>
+                                    No. Your image is read straight into the browser tab, turned into pixels,
+                                    and thrown away when you close it. There is no upload endpoint and no
+                                    storage — the only network requests are for the AI model files themselves.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                <button class="faq-question">
+                    <div class="faq-item">
+                        <button class="faq-question" type="button" aria-expanded="false">
+                            <span>How accurate is the analysis?</span>
+                            <span class="faq-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer__inner">
+                                <p>
+                                    The scanner runs real facial-landmark detection (Google's MediaPipe)
+                                    to measure symmetry, golden-ratio proportions, canthal tilt and skin
+                                    texture. Those are geometric estimates tuned by eye against a handful
+                                    of test photos — fun and directional, not a medical or scientific
+                                    measurement of attractiveness.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                    Is my photo stored?
+                    <div class="faq-item">
+                        <button class="faq-question" type="button" aria-expanded="false">
+                            <span>What kind of photo works best?</span>
+                            <span class="faq-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer__inner">
+                                <p>
+                                    Front-facing, sharp, evenly lit, and with your whole head inside the
+                                    frame. Avoid heavy filters, extreme angles and harsh side shadows —
+                                    they all distort landmark positions and make the score wobble. If the
+                                    photo is soft or low-resolution the scanner will tell you.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <span>+</span>
-                </button>
+                    <div class="faq-item">
+                        <button class="faq-question" type="button" aria-expanded="false">
+                            <span>Why does it ask about my gender?</span>
+                            <span class="faq-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer__inner">
+                                <p>
+                                    It doesn't — gender is auto-detected from the photo (face-api.js) purely
+                                    to pick the right tier labels and tip wording. It changes the copy, not
+                                    the underlying scores, and it defaults to male if detection fails.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="faq-answer">
-
-                    <p>
-                        No. Your uploaded image is only used for analysis and is not permanently stored.
-                    </p>
-
+                    <div class="faq-item">
+                        <button class="faq-question" type="button" aria-expanded="false">
+                            <span>Do I need to install anything?</span>
+                            <span class="faq-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer__inner">
+                                <p>
+                                    No install, no account, no API key. The first scan downloads the
+                                    MediaPipe and face-api.js model files from a public CDN, so you need an
+                                    internet connection on first load — after that the browser caches them.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
             </div>
+        </section>
 
-            <div class="faq-item">
-
-                <button class="faq-question">
-
-                    How accurate is the AI analysis?
-
-                    <span>+</span>
-
-                </button>
-
-                <div class="faq-answer">
-
-                    <p>
-                        The scanner below runs real, on-device facial landmark detection
-                        (Google's MediaPipe) to compute your face's symmetry and golden-ratio
-                        proportions — nothing is uploaded. These are geometric estimates for fun,
-                        not a medical or scientific measurement of attractiveness.
-                    </p>
-
+        <section class="cta-band">
+            <div class="container">
+                <div class="cta-band__inner" data-reveal>
+                    <div>
+                        <h2>Curious what your numbers look like?</h2>
+                        <p>One photo, ten seconds, no sign-up.</p>
+                    </div>
+                    <a href="#scanner" class="btn btn--primary btn--lg">
+                        <span>Run the scanner</span>
+                        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
+                    </a>
                 </div>
-                
             </div>
-            
         </section>
     </main>
-    <footer class="footer">
+<footer class="footer" id="contact">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#home" class="logo logo--footer">
+                        <span class="logo__mark" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+                                <circle cx="9" cy="11" r="1" fill="currentColor" stroke="none" />
+                                <circle cx="15" cy="11" r="1" fill="currentColor" stroke="none" />
+                                <path d="M9.5 15.5c1.6 1 3.4 1 5 0" />
+                            </svg>
+                        </span>
+                        <span class="logo__text">FaceInsight<em>AI</em></span>
+                    </a>
+                    <p>
+                        AI-powered facial analysis for educational and portfolio purposes.
+                        All computation happens in your browser.
+                    </p>
+                    <ul class="footer-social">
+                        <li>
+                            <a href="mailto:anrahadi02@gmail.com" aria-label="Email">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                                    <path d="M3.5 7.5l8.5 6 8.5-6" />
+                                </svg>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/anrahadi-dotcom" target="_blank" rel="noopener noreferrer"
+                                aria-label="GitHub">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.15-1.11-1.46-1.11-1.46-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" />
+                                </svg>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-        <div class="footer-container">
+                <nav class="footer-links" aria-label="Footer">
+                    <h3>Quick links</h3>
+                    <a href="#home">Home</a>
+                    <a href="#features">Features</a>
+                    <a href="#about">How it works</a>
+                    <a href="#scanner">Scanner</a>
+                    <a href="#faq">FAQ</a>
+                </nav>
 
-            <div class="footer-logo">
-
-                <h2>FaceInsight AI</h2>
-
-                <p>
-                    AI-powered facial analysis designed for educational and portofolio purposes
-                </p>
+                <div class="footer-contact">
+                    <h3>Get in touch</h3>
+                    <a href="mailto:anrahadi02@gmail.com">anrahadi02@gmail.com</a>
+                    <a href="https://github.com/anrahadi-dotcom" target="_blank"
+                        rel="noopener noreferrer">github.com/anrahadi-dotcom</a>
+                </div>
             </div>
 
-            <div class="footer-links">
-
-                <h3>Quick Links</h3>
-
-                <a href="#home">Home</a>
-                <a href="#features">Features</a>
-                <a href="#about">How it Works</a>
-                <a href="#faq">FAQ</a>
-
+            <div class="footer-bottom">
+                <p>© <span id="year">2026</span> FaceInsight AI. Built with HTML, CSS & JavaScript.</p>
+                <p class="footer-bottom__note">Scores are geometric estimates for fun — not a medical measurement.</p>
             </div>
-
-            <div class="footer-contact">
-
-                <h3>Contact</h3>
-
-                <p>📧 anrahadi02@gmail.com</p>
-                <p>💻 github.com/anrahadi-dotcom</p>
-            </div>
-
         </div>
-
-        <hr>
-
-        <p class="copyright">
-             © 2026 FaceInsight AI. Built with ❤️ using HTML, CSS & JavaScript.
-        </p>
     </footer>
-    <script src="js/ai.js"></script>
+
+    <button class="to-top" id="toTop" type="button" aria-label="Back to top">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 19V5M6 11l6-6 6 6" />
+        </svg>
+    </button>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
+
     <script type="module" src="js/main.js"></script>
-    
 </body>
 
 </html>
