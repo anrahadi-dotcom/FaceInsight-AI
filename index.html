@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/responsive.css">
     <!-- Kept separate from style.css so the hairstyle tool stays self-contained. -->
     <link rel="stylesheet" href="css/hairstyle.css">
+    <link rel="stylesheet" href="css/boot-guard.css">
 </head>
 
 <body class="no-js">
@@ -47,7 +48,6 @@
                 <li><a class="nav-link" href="#home">Home</a></li>
                 <li><a class="nav-link" href="#features">Features</a></li>
                 <li><a class="nav-link" href="#about">How it works</a></li>
-                <li><a class="nav-link" href="#hairstyle">Hairstyle</a></li>
                 <li><a class="nav-link" href="#faq">FAQ</a></li>
                 <li><a class="nav-link" href="#contact">Contact</a></li>
             </ul>
@@ -70,6 +70,22 @@
             </div>
         </nav>
     </header>
+
+    <!-- Connectivity strip. Hidden until the browser reports offline; see
+         initConnectivityStrip() in js/main.js. It LABELS the offline state rather
+         than blocking it, because a scan served from cache still works and
+         stopping it would be a regression. -->
+    <div class="conn-strip" id="connectivityStrip" role="status" aria-live="polite" hidden>
+        <svg class="conn-strip__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4l18 18" />
+            <path d="M5.5 12.5a10 10 0 0 1 3.2-1.9" />
+            <path d="M2 9a15 15 0 0 1 4.3-2.6" />
+            <path d="M12 19h.01" />
+            <path d="M9.4 15.6a5 5 0 0 1 5.2 0" />
+        </svg>
+        <span class="conn-strip__text"></span>
+    </div>
 
     <main id="main">
         <section id="home" class="hero">
@@ -600,7 +616,19 @@
                             <div class="verdict__glow" aria-hidden="true"></div>
                             <div class="verdict__head">
                                 <span class="verdict__eyebrow">Combined verdict</span>
-                                <span id="scanSources" class="verdict__sources">Front photo</span>
+                                <span class="verdict__head-actions">
+                                    <span id="scanSources" class="verdict__sources">Front photo</span>
+                                    <button type="button" class="btn btn--ghost btn--sm verdict__download"
+                                        id="downloadReportBtn">
+                                        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                            aria-hidden="true">
+                                            <path d="M12 4v10M7.5 9.5L12 14l4.5-4.5" />
+                                            <path d="M5 18h14" />
+                                        </svg>
+                                        <span>Download PDF</span>
+                                    </button>
+                                </span>
                             </div>
 
                             <div class="verdict__main">
@@ -760,6 +788,15 @@
                                 <h4>Eye shape</h4>
                                 <p id="scanEyeShape">--</p>
                             </div>
+                            <!-- Nose. Wide, like the other evidence cards: the shape
+                                 name and its reason run to a full sentence, and in a
+                                 compact 3-up card that sentence wrapped to four lines
+                                 and was clipped at the card edge. -->
+                            <div class="scan-detail-card scan-detail-card--wide">
+                                <h4>Nose</h4>
+                                <p id="scanNose">--</p>
+                                <p id="scanNoseShape" class="scan-why">--</p>
+                            </div>
                             <!-- The two evidence cards are LAST so the six compact
                                  cards tile as a clean 3 + 3 above them, and the two
                                  wide cards then tile as 2. Putting Eye shape after
@@ -795,7 +832,7 @@
                             </p>
                             <div class="scan-eye-grid">
                                 <div class="scan-eye-item">
-                                    <span class="scan-eye-item__label">Canthal tilt <em>·30%</em></span>
+                                    <span class="scan-eye-item__label">Canthal tilt <em>·32%</em></span>
                                     <span id="scanEyeCanthal" class="scan-eye-item__value">--</span>
                                     <span class="scan-eye-item__bar"><i id="scanEyeCanthalBar"></i></span>
                                 </div>
@@ -805,12 +842,12 @@
                                     <span class="scan-eye-item__bar"><i id="scanEyeProjectionBar"></i></span>
                                 </div>
                                 <div class="scan-eye-item">
-                                    <span class="scan-eye-item__label">Eyelid exposure <em>·25%</em></span>
+                                    <span class="scan-eye-item__label">Eyelid exposure <em>·28%</em></span>
                                     <span id="scanEyeEyelid" class="scan-eye-item__value">--</span>
                                     <span class="scan-eye-item__bar"><i id="scanEyeEyelidBar"></i></span>
                                 </div>
                                 <div class="scan-eye-item">
-                                    <span class="scan-eye-item__label">Brow &amp; spacing <em>·20%</em></span>
+                                    <span class="scan-eye-item__label">Brow &amp; spacing <em>·15%</em></span>
                                     <span id="scanEyeBrow" class="scan-eye-item__value">--</span>
                                     <span class="scan-eye-item__bar"><i id="scanEyeBrowBar"></i></span>
                                 </div>
@@ -870,6 +907,67 @@
                                     <!-- Filled by main.js from the live analysis. -->
                                 </ul>
                             </section>
+                        </div>
+
+                        <!-- ===== WHAT'S HOLDING YOUR POTENTIAL? =====
+                             Fills the gap between "here is your potential" and "so
+                             what do I DO". Each row is a real measured reading that
+                             sits below its target, ranked by how many overall points
+                             it is actually costing. Built from the same analysis as
+                             the rest of the report; hidden when nothing is limiting
+                             (an already-elite face). -->
+                        <div id="scanLimitsPanel" class="scan-limits hidden">
+                            <div class="scan-limits__head">
+                                <h4>What's holding your potential?</h4>
+                                <span id="scanLimitsCount" class="scan-limits__count">--</span>
+                            </div>
+                            <p class="scan-limits__lead">
+                                The readings keeping you below your ceiling, biggest lever first. Fixing
+                                the top one moves your score the most.
+                            </p>
+                            <ul id="scanLimitsList" class="scan-limits__list">
+                                <!-- Filled by main.js from the live analysis. -->
+                            </ul>
+                        </div>
+
+                        <!-- ===== HAIRSTYLE (merged into the scan result) =====
+                             This used to be a SEPARATE section with its own upload
+                             and its own nav link, which meant scanning the same
+                             face twice. It now rides on the SAME analysis the
+                             scan already produced -- no second photo, no second
+                             model run -- and sits directly above Scan reliability,
+                             so the whole report is one flow. -->
+                        <div id="scanHairPanel" class="scan-hair hidden">
+                            <div class="scan-hair__head">
+                                <h4>Haircuts that suit your face</h4>
+                                <span id="scanHairShape" class="scan-hair__shape">--</span>
+                            </div>
+                            <p id="scanHairSummary" class="scan-hair__summary"></p>
+                            <p id="scanHairAvoid" class="scan-hair__avoid"></p>
+
+                            <!-- Length preference. Reruns only the RE-RANK (no photo,
+                                 no model) so switching it is instant, and it lets a user
+                                 who will never go short or medium still get advice.
+                                 The hint line makes it obvious these are CONTROLS, not
+                                 labels -- the reported "nothing happens" was partly a
+                                 discoverability problem, not only a wiring one. -->
+                            <div class="scan-hair__length" role="group" aria-label="Preferred hair length">
+                                <span class="scan-hair__length-label">Show me</span>
+                                <div class="scan-hair__length-btns" id="scanHairLengthBtns">
+                                    <button type="button" class="scan-hair__len-btn is-active" data-length="any">Any length</button>
+                                    <button type="button" class="scan-hair__len-btn" data-length="veryshort">Very short</button>
+                                    <button type="button" class="scan-hair__len-btn" data-length="short">Short</button>
+                                    <button type="button" class="scan-hair__len-btn" data-length="medium">Medium</button>
+                                    <button type="button" class="scan-hair__len-btn" data-length="long">Long</button>
+                                </div>
+                                <span class="scan-hair__length-hint">tap to re-rank instantly</span>
+                            </div>
+
+                            <ul id="scanHairCutList" class="hair-cut-list"></ul>
+                            <p class="scan-hair__disclaimer">
+                                Styling principles applied to your measured proportions — a
+                                hairdresser can adapt them to your hair type and growth pattern.
+                            </p>
                         </div>
 
                         <div id="scanQualityPanel" class="scan-quality">
@@ -1039,108 +1137,6 @@
             </div>
         </section>
 
-        <!-- ===== AI HAIRSTYLE =====
-             A self-contained tool, deliberately SEPARATE from the scanner: its own
-             file input, its own button, its own result panel. It shares nothing
-             with #scanner except the engine underneath, so a change here cannot
-             break the scan flow, and vice versa. The photo a user drops here is
-             never the photo the scanner is holding.
-             (No hyphen runs inside this comment: a double hyphen closes an HTML
-             comment early and dumps the rest of the text onto the page.) -->
-        <section id="hairstyle" class="section hairstyle">
-            <div class="container">
-                <div class="section-head section-head--center" data-reveal>
-                    <span class="eyebrow">Hairstyle advisor</span>
-                    <h2>Which haircut suits your face shape</h2>
-                    <p>
-                        Drop in one straight-on photo. We measure the width ratios of your face,
-                        classify its shape, and suggest the cuts that flatter it — each one with the
-                        reason it was picked.
-                    </p>
-                </div>
-
-                <div class="hairstyle__layout">
-                    <!-- ---- input column ---- -->
-                    <div class="hairstyle__col hairstyle__col--input" data-reveal>
-                        <label for="hairInput" class="hair-drop" id="hairDrop" tabindex="0">
-                            <input type="file" id="hairInput" accept="image/*">
-
-                            <span class="hair-drop__empty">
-                                <span class="upload-icon-ring" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
-                                        stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 16V5M7.5 9.5L12 5l4.5 4.5" />
-                                        <path d="M4.5 15v3A2 2 0 0 0 6.5 20h11a2 2 0 0 0 2-2v-3" />
-                                    </svg>
-                                </span>
-                                <h3 class="upload-title">Drop a front-facing photo</h3>
-                                <p class="upload-text">or <span class="upload-link">click to browse</span></p>
-                                <p class="upload-hint">Same photo rules as the scanner · h&#8203;air on show gives the best read</p>
-                            </span>
-
-                            <span class="hair-drop__preview">
-                                <img id="hairPreview" src="" alt="">
-                                <span class="hair-drop__file" id="hairFileName"></span>
-                            </span>
-                        </label>
-
-                        <div class="hair-actions">
-                            <button type="button" class="btn btn--primary btn--lg" id="hairAnalyzeBtn" disabled>
-                                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M4 20c0-5 3.6-8 8-8s8 3 8 8" />
-                                    <circle cx="12" cy="7.5" r="3.6" />
-                                </svg>
-                                <span>Find my haircuts</span>
-                            </button>
-                            <button type="button" class="btn btn--ghost btn--lg" id="hairResetBtn" hidden>
-                                <span>Reset</span>
-                            </button>
-                        </div>
-
-                        <div id="hairLoading" class="scan-loading" aria-hidden="true">
-                            <div class="bar"><i class="progress"></i></div>
-                            <p id="hairLoadingText">0%</p>
-                            <span class="scan-loading__spinner" aria-hidden="true"></span>
-                        </div>
-
-                        <p id="hairStatus" class="scan-status" role="status" aria-live="polite"></p>
-                    </div>
-
-                    <!-- ---- result column ---- -->
-                    <div class="hairstyle__col hairstyle__col--result">
-                        <div id="hairResults" class="hair-results hidden" aria-live="polite">
-                            <div class="hair-shape-card">
-                                <span class="hair-shape-card__kicker">Measured face shape</span>
-                                <strong class="hair-shape-card__value" id="hairShapeValue">--</strong>
-                                <p class="hair-shape-card__summary" id="hairShapeSummary"></p>
-                                <p class="hair-shape-card__avoid" id="hairShapeAvoid"></p>
-                            </div>
-
-                            <p class="hair-results__note" id="hairNote" hidden></p>
-
-                            <h3 class="hair-results__heading" id="hairCutHeading">Shortlisted cuts</h3>
-                            <ul class="hair-cut-list" id="hairCutList"></ul>
-
-                            <p class="hair-disclaimer">
-                                These are styling principles applied to your measured proportions, not a
-                                guarantee — a hairdresser can adapt them to your hair type and growth pattern.
-                            </p>
-                        </div>
-
-                        <div class="hair-placeholder" id="hairPlaceholder">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
-                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M4 20c0-5 3.6-8 8-8s8 3 8 8" />
-                                <circle cx="12" cy="7.5" r="3.6" />
-                            </svg>
-                            <p>Your face shape and matching cuts will appear here.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <section class="cta-band">
             <div class="container">
                 <div class="cta-band__inner" data-reveal>
@@ -1234,6 +1230,13 @@
 
     <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
 
+    <!-- Boot guard: a CLASSIC script, on purpose.
+         It reports the case where this page was opened from disk (file://),
+         where the browser blocks every module below and the app is silently
+         inert. A module could not report that, because it would be blocked by
+         the same rule. Loaded BEFORE main.js so it is already watching when the
+         app either boots or does not. -->
+    <script src="js/boot-guard.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 

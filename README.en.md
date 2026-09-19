@@ -20,7 +20,7 @@ Most face analysis apps ask you to upload your photo to someone else's server, a
 
 - **478-point face scan.** Mapped automatically with Google's MediaPipe FaceLandmarker.
 - **10 scored metrics.** Symmetry, golden ratio, face shape, canthal tilt, facial harmony, skin quality, skin clarity, eye shape, face fat, and jawline.
-- **Detailed eye-area analysis.** The score is not a single number. You can see how each part is weighted (canthal tilt 30%, eye projection 25%, eyelid exposure 25%, brow and eye spacing 20%), so it is clear which part is lifting or dragging the score.
+- **Detailed eye-area analysis.** The score is not a single number. You can see how each part is weighted (canthal tilt 32%, eye projection 25%, eyelid exposure 28%, brow and eye spacing 15%), so it is clear which part is lifting or dragging the score.
 - **Optional side-profile analysis.** Add a profile photo to unlock a report on the gonial angle, ramus, mandible, eye projection, nose, and profile line.
 - **Photo quality check.** The app checks detection confidence, lighting, sharpness, and head angle. If the photo is not good enough, it tells you instead of giving a made-up score.
 - **Potential and strengths.** Shows which areas can still be improved (skin, face fat, jaw definition, eyelid exposure) and your four strongest features.

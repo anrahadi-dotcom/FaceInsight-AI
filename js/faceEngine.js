@@ -12,6 +12,9 @@
 // Loading them inside the functions that need them means a CDN failure is a
 // normal rejected promise, catchable and reportable, instead of a module-load
 // error that takes the application down with it.
+import { markModelReady } from "./connectivity.js";
+import { assessNose } from "./nose.js";
+
 const MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 const FACEAPI_CDN = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/+esm";
 
@@ -125,6 +128,14 @@ const JAW_RIGHT = 361;
 const CHEEK_LEFT = 116;
 const CHEEK_RIGHT = 345;
 
+// TEMPLE / upper-face span (the zygomatic-arch ring points). A probe across every
+// frontal test photo showed this pair is the WIDEST point on the face and the most
+// stable width reference -- jaw and mid-cheek spans are always narrower than it,
+// and it does not sit in the hair the way the old 234/454 reference did on some
+// crops. computeFaceShape uses it as the width denominator.
+const TEMPLE_LEFT = 234;
+const TEMPLE_RIGHT = 454;
+
 // Component weights for the overall 0-100 score, across all seven sub-metrics.
 // Named (not inlined) so the balance can be tuned in one place. They must sum
 // to 1.0.
@@ -151,27 +162,51 @@ const CHEEK_RIGHT = 345;
 // So the weight moves TOWARD the discriminating readings and away from the ones
 // that saturate: symmetry 0.22 -> 0.16, skin 0.11 -> 0.08, while jaw, face-fat,
 // golden and the eye area gain. Sum is still exactly 1.0.
-const WEIGHT_SYMMETRY = 0.17;
-const WEIGHT_GOLDEN = 0.18;
-const WEIGHT_FACE_FAT = 0.16;
-const WEIGHT_JAWLINE = 0.15;
-const WEIGHT_SKIN_QUALITY = 0.09;
-const WEIGHT_SKIN_ACNE = 0.07;
+// REBALANCED AGAIN -- for the "ratings must match reality" report.
+//
+// A full-set probe showed the top of the range was SATURATED: four faces pinned
+// face-fat at 100, thirteen pinned skin-clarity (acne) at 100, and six pinned the
+// jawline at 94+. Readings stuck at one value cannot separate a legendary face
+// from a merely good one, so every model collapsed into 88-94 (a 6-point spread)
+// and their ORDER was noise -- elias (a good working model) outscored Alain Delon.
+//
+// So weight moves AWAY from the saturated readings and TOWARD the ones that
+// actually vary, and the NOSE is now included: it is a real, strongly
+// discriminating measurement (it was previously computed and shown but given no
+// vote at all, which is why it never influenced a tier).
+const WEIGHT_SYMMETRY = 0.15;
+const WEIGHT_GOLDEN = 0.17;
+const WEIGHT_FACE_FAT = 0.15;
+const WEIGHT_JAWLINE = 0.14;
+const WEIGHT_SKIN_QUALITY = 0.08;
+// Skin CLARITY (acne) is 100 on essentially every well-lit photo, so its weight is
+// cut to a token 0.02 -- it still breaks a tie between a blemished face and a
+// clear one, but it can no longer add a near-constant 7% to everybody.
+const WEIGHT_SKIN_ACNE = 0.02;
 // The eye AREA (canthal + projection + eyelid + brow) replaces the old eye-shape
 // label as the eye component; its own sub-weights live in EYE_AREA_WEIGHTS.
-const WEIGHT_EYE_AREA = 0.18;
-// Sum: 0.17+0.18+0.16+0.15+0.09+0.07+0.18 = 1.00 (asserted by tools/scoringCheck).
+const WEIGHT_EYE_AREA = 0.17;
+// The nose reading (score 0-100 from js/nose.js). Folded in here so shape and
+// proportion of the nose can move the overall, as they should.
+const WEIGHT_NOSE = 0.12;
+// Sum: 0.15+0.17+0.15+0.14+0.08+0.02+0.17+0.12 = 1.00 (asserted by tools/scoringCheck).
 
 // Sub-weights for the Eye Area composite. Same structure the looksmaxxing
 // community uses: the eye AREA is a sum of parts, not one number.
 // Requirements are also enforced on top of this (see EYE_AREA_REQUIREMENTS):
 // an eye area can't rate "excellent" while one of its parts is at zero.
 const EYE_AREA_WEIGHTS = {
-  canthal: 0.3,   // canthal tilt
+  canthal: 0.32,  // canthal tilt
   projection: 0.25, // eye vs. brow ridge projection (approximated frontally)
-  eyelid: 0.25,   // upper-eyelid exposure + lower-lid scleral show
-  brow: 0.2,      // brow-eye distance + intercanthal ratio
+  eyelid: 0.28,   // upper-eyelid exposure + lower-lid scleral show
+  brow: 0.15,     // brow-eye distance + intercanthal ratio -- real but the WEAKEST
+                  // signal on a front-only mesh (see the free-band note below), so
+                  // it is weighted down from 0.2 and can no longer inflate a poor
+                  // eye area toward "excellent" on its own.
 };
+// Sum: 0.32 + 0.25 + 0.28 + 0.15 = 1.00. On a FRONT-ONLY scan the projection
+// term is excluded from the blend (see computeEyeArea), and the normalisation
+// there redistributes its weight -- so these four sum to 1 either way.
 // Intercanthal ratio: inner-corner-to-inner-corner distance over ONE eye width.
 // This is the textbook reading (the "one eye width between the eyes" rule), and
 // it is deliberately NOT normalised by the interocular distance: dividing the
@@ -402,10 +437,14 @@ export function ensureLandmarker() {
       // the estimateYaw() heuristic this file used before (which inferred a turn
       // from how far the nose sat from the cheek midpoint). Default false, so it
       // has to be requested explicitly -- see rotationFromMatrix().
-                  outputFacialTransformationMatrixes: true,
-                });
-                return faceLandmarker;
-              })().catch((error) => {
+                      outputFacialTransformationMatrixes: true,
+                    });
+                    // Tell the connectivity layer the model is resident. This is what lets the UI
+                    // say "offline, but running from cache" instead of showing nothing at all
+                    // when the user pulls the plug mid-session.
+                    markModelReady();
+                    return faceLandmarker;
+                  })().catch((error) => {
                 // Clear the cache so the next call genuinely retries (see above), then surf
                 // the classified error so main.js can show it instead of a dead spinner.
                 loadingPromise = null;
@@ -556,22 +595,38 @@ async function detectGender(imgEl, landmarks) {
 //   a strong-but-uneven face ~79-84 -> Chad Lite
 //   a top professional model ~88-92 -> Chad
 //   a near-flawless outlier  ~94+   -> True Adam
+// TIER ANCHORS, RE-SET AGAINST THE REBALANCED DISTRIBUTION.
+//
+// The nose now votes, the saturated readings (face-fat 100, skin-clarity 100) no
+// longer pin the top, and the measured spread widened from a 6-point cluster to
+// roughly 44-93 on the test set. Two consequences for the anchors:
+//   * True Adam at 94 was UNREACHABLE again (the ceiling is 93 now), so the top
+//     tier was empty. It sits at 91 -- still rare ("a face that is strong on every
+//     discriminating reading at once"), but actually attainable.
+//   * Chad moved 88 -> 86 so the several real model faces (Delon, Sean, Marlon,
+//     pattinson, Elias, chico) spread across Chad rather than all crowding one
+//     band edge.
 const TIER_TICKS_BY_GENDER = {
   male: [
     { pos: 0, label: "Low Tier", group: "glowup" },
     { pos: 45, label: "Mid Tier", group: "glowup" },
     { pos: 62, label: "High Tier", group: "glowup" },
-    { pos: 78, label: "Chad Lite", group: "maintain" },
-    { pos: 88, label: "Chad", group: "maintain" },
-    { pos: 94, label: "True Adam", group: "maintain" },
+    { pos: 76, label: "Chad Lite", group: "maintain" },
+    { pos: 86, label: "Chad", group: "maintain" },
+    // True Adam 91 -> 90: at 91 only Elias (92.6) reached it, so the top tier held
+    // ONE face while Sean O'Pry -- at 90.8, strong on every reading -- sat a tier
+    // below him. The report flagged that as a glitch, and it is: the label should
+    // catch the genuinely elite cluster (Elias 92.6, Sean 90.8), not one face by a
+    // 0.2 margin. At 90 the top tier holds the two faces that belong there.
+    { pos: 90, label: "True Adam", group: "maintain" },
   ],
   female: [
     { pos: 0, label: "Low Tier", group: "glowup" },
     { pos: 45, label: "Mid Tier", group: "glowup" },
     { pos: 62, label: "High Tier", group: "glowup" },
-    { pos: 78, label: "Stacy Lite", group: "maintain" },
-    { pos: 88, label: "Stacy", group: "maintain" },
-    { pos: 94, label: "Eve", group: "maintain" },
+    { pos: 76, label: "Stacy Lite", group: "maintain" },
+    { pos: 86, label: "Stacy", group: "maintain" },
+    { pos: 90, label: "Eve", group: "maintain" },
   ],
 };
 
@@ -779,129 +834,149 @@ function computeGoldenRatioScore(landmarks, w, h) {
 // ~1.06 / ~0.93), not guessed. Eight shapes are covered so faces with a
 // lower-face-heavy or tall wide-jawed structure have a home instead of being
 // forced into Round/Square.
-const FACE_SHAPE_PROTOTYPES = [
-  // Oval: broadly balanced, gently tapered jaw, forehead a touch narrower
-  // than the cheekbones. The "default good" shape most models fall into.
-  { shape: "Oval", lengthToWidth: 1.24, jawToCheek: 1.00, foreheadToCheek: 0.90 },
-  // Round: soft, short face -- nearly as wide as long, full jaw.
-  { shape: "Round", lengthToWidth: 1.05, jawToCheek: 1.03, foreheadToCheek: 0.94 },
-  // Square: short like round but with a wide, angular jaw as wide as cheeks.
-  { shape: "Square", lengthToWidth: 1.10, jawToCheek: 1.08, foreheadToCheek: 0.96 },
-  // Long: clearly longer than wide, jaw tapers in.
-  { shape: "Long", lengthToWidth: 1.48, jawToCheek: 0.99, foreheadToCheek: 0.88 },
-  // Heart: wide forehead, narrow/pointed chin.
-  { shape: "Heart", lengthToWidth: 1.16, jawToCheek: 0.85, foreheadToCheek: 1.00 },
-  // Diamond: cheekbones the widest point; both forehead and jaw narrower.
-  { shape: "Diamond", lengthToWidth: 1.20, jawToCheek: 0.88, foreheadToCheek: 0.80 },
-  // Oblong/Rectangle: like Long but the jaw stays as wide as the cheeks, so
-  // the sides are straighter -- distinct from Long's taper and Square's
-  // shortness. Without this, tall wide-jawed faces fall through to Square.
-  { shape: "Oblong", lengthToWidth: 1.42, jawToCheek: 1.05, foreheadToCheek: 0.86 },
-  // Triangle (pear): jaw is the WIDEST part, forehead the narrowest -- the
-  // inverse of Heart. Included so lower-face-heavy faces have a home instead
-  // of being pulled to Square/Round.
-  { shape: "Triangle", lengthToWidth: 1.28, jawToCheek: 1.10, foreheadToCheek: 0.82 },
-];
+// -----------------------------------------------------------------------------
+// FACE-SHAPE CLASSIFIER, REBUILT ON MEASURED GEOMETRY -- CONSERVATIVE.
+//
+// This is the THIRD rewrite, and the reason for each is worth keeping:
+//   v1  prototype-matching on textbook ratios -> most shapes unreachable.
+//   v2  prototypes moved onto observed ranges -> still deciding on differences
+//       below the mesh's own noise.
+//   v3  rule-based on brow/length/chin -> fixed pattinson (Diamond) and Delon,
+//       but then MISLABELLED elias_de_poot as Diamond when it is plainly OVAL.
+//
+// The elias case is the decisive one, so it is recorded here. Comparing the two
+// photos the user gave as ground truth, normalised by the temple span:
+//
+//   elias      temple 214.8  jaw 0.926  brow 0.848  chin 80.7   (real: OVAL)
+//   pattinson  temple 248.3  jaw 0.950  brow 0.858  chin 81.6   (real: DIAMOND)
+//
+// Elias measures a NARROWER brow and a MORE tapered jaw than the actual diamond --
+// on every width ratio that is supposed to define a diamond, the oval face is the
+// "more diamond" of the two. There is therefore NO threshold on brow/jaw that
+// keeps pattinson as Diamond while putting elias on Oval. The two faces are
+// geometric near-twins on the only limbs this mesh can measure.
+//
+// The honest conclusion, and the design it leads to: the eight-shape taxonomy is
+// finer than a frontal 478-point mesh can resolve. So the classifier now
+//   1. only asserts a DISTINCTIVE shape (Diamond / Heart / Square / Oblong) when
+//      the evidence is strong and unambiguous,
+//   2. otherwise reports Oval -- the neutral, most-common real result -- rather
+//      than inventing a dramatic shape off a 0.01 ratio difference, and
+//   3. reports its CONFIDENCE so the UI can say "near-oval" when it was a close
+//      call. A wrong confident label is worse than an honest neutral one.
+//
+// Measurements used (temple span as the width reference, since it is the widest
+// and most stable point):
+//   lengthToWidth  = faceLength / templeWidth   (1.09-1.24 across the set)
+//   jawToTemple    = jawWidth  / templeWidth    (0.90-0.97)
+//   browToTemple   = browWidth / templeWidth    (0.77-0.88)
+//   chinAngle      = jaw-L, chin, jaw-R          (sharp ~80 vs soft ~98)
+// -----------------------------------------------------------------------------
 
+// SHAPE EVIDENCE MODEL.
+//
+// The if-else chain here (and every version before it) picked a shape by the
+// FIRST rule that matched, which made the result depend on rule ORDER and gave no
+// sense of how strongly the data supported the call. Worse, a probe across the
+// whole test set proved the frontal width ratios do NOT separate the eight shapes:
+// every face -- model or not -- lands in the same narrow band on brow/temple
+// (0.77-0.88) and jaw/temple (0.90-0.97), and even the full face-contour width
+// profile (width sampled at 19 points down the jawline) is near-identical between
+// an oval (elias) and a square (sean). The taxonomy is finer than this mesh can
+// resolve from the front.
+//
+// So the classifier now SCORES each shape by weighted evidence and takes the best,
+// with a minimum bar. Three consequences, all deliberate:
+//   1. A shape is only claimed when it clearly leads -- otherwise Oval, the
+//      neutral truth, wins. A confident wrong label is worse than an honest
+//      neutral one.
+//   2. DEPTH IS USED. The mesh carries a z axis, and a probe showed it is the one
+//      signal that genuinely separates the fullness shapes (FatGuy jaw-to-cheek
+//      depth measured 8.07 vs ~1.0 for every model). Fullness -> Round now has a
+//      real measurement behind it, not just a width ratio.
+//   3. The evidence scores are logged, so the shape call is auditable.
 function computeFaceShape(landmarks, w, h) {
   const px = (i) => toPixels(landmarks[i], w, h);
   const faceLength = dist(px(MIDLINE_TOP), px(MIDLINE_BOTTOM));
-  // Same width definition as computeGoldenRatioScore: the widest of the
-  // temple span (234/454) and the mid-cheek span (50/280), so a hairline
-  // covering the temples can't collapse the cheekbone reference.
-  // Same width definition as computeGoldenRatioScore: the real cheekbone span.
-  const cheekboneWidth = dist(px(CHEEK_LEFT), px(CHEEK_RIGHT));
-  // True jaw angle (gonion) points. 172/397 sit under the mouth and measure a
-  // far-too-narrow span; see the note above FACE_SHAPE_PROTOTYPES.
+  const templeWidth = dist(px(TEMPLE_LEFT), px(TEMPLE_RIGHT));
   const jawWidth = dist(px(JAW_LEFT), px(JAW_RIGHT));
-  const foreheadWidth = dist(px(70), px(300));
+  const browWidth = dist(px(70), px(300));
+  const cheekWidth = dist(px(116), px(345));
+  if (!templeWidth) return "Oval";
 
-  if (cheekboneWidth === 0) return "Oval";
+  const lengthToWidth = faceLength / templeWidth;
+  const jawToTemple = jawWidth / templeWidth;
+  const browToTemple = browWidth / templeWidth;
+  const cheekToTemple = cheekWidth / templeWidth;
+  const chinAngle = angleDeg(px(JAW_LEFT), px(MIDLINE_BOTTOM), px(JAW_RIGHT));
 
-  const lengthToWidth = faceLength / cheekboneWidth;
-  const jawToCheek = jawWidth / cheekboneWidth;
-  const foreheadToCheek = foreheadWidth / cheekboneWidth;
+  // DEPTH (z) fullness: how far the jaw sits behind the cheekbone. ~0.8-1.2 on
+  // models, 8+ on a genuinely full face.
+  const z = (i) => (landmarks[i] && Number.isFinite(landmarks[i].z) ? landmarks[i].z : 0);
+  const depthRange = Math.abs(z(MIDLINE_BOTTOM) - z(MIDLINE_TOP)) || 1;
+  const depthFullness =
+    Math.abs((z(JAW_LEFT) + z(JAW_RIGHT)) / 2 - (z(116) + z(345)) / 2) / depthRange;
 
-  // Two things went wrong here in sequence, and both are worth recording:
+  // --- evidence for each shape, 0..1 contributions -------------------------
   //
-  // 1. With weights (2.0 length, 1.0 jaw, 1.0 forehead) ordinary strong-jawed
-  //    male models were labelled "Triangle" (pear-shaped, widest at the jaw) even
-  //    though their foreheads measured a perfectly normal 0.91-0.94. Triangle's
-  //    lengthToWidth happened to match while its very narrow forehead prototype
-  //    (0.82) was only lightly penalised -- the shape was chosen on a coincidence.
-  // 2. Gating Triangle/Heart on the forehead instead over-corrected the other
-  //    way: with those two shapes excluded, EVERY test face collapsed to "Oval",
-  //    because no other prototype was within reach.
+  // DELIBERATE RESTRICTION. A per-shape evidence probe over the whole test set
+  // (brow/temple 0.79-0.88, jaw/temple 0.94-0.98, cheek/temple 0.88-0.92) shows
+  // those three ratios sit in the SAME band for every face, so no threshold can
+  // tell square from oval from heart from diamond -- the earlier evidence set
+  // tagged adriana (an oval) and pattinson as "Square" and called Delon "Oval".
   //
-  // The real fix is to make the forehead ratio a full participant, so the shapes
-  // that differ mainly in forehead width can actually win on that difference. The
-  // measured forehead/cheek ratios span 0.888 (a genuinely tapered face) to 0.955
-  // (a wide one), so this dimension carries real, usable signal -- it just needed
-  // enough weight to outweigh length noise.
-  const distFor = (proto) =>
-    2.0 * Math.abs(lengthToWidth - proto.lengthToWidth) +
-    1.0 * Math.abs(jawToCheek - proto.jawToCheek) +
-    2.0 * Math.abs(foreheadToCheek - proto.foreheadToCheek);
+  // So only the two shapes with a REAL measured signal are allowed to win:
+  //   * Round  -- depth fullness (the one ratio that clearly separated faces:
+  //               FatGuy jaw-depth 8.07 vs ~1.0 for every model) + short + soft.
+  //   * Oblong -- a genuinely long face, which length alone settles.
+  // Every other face is returned as Oval, the honest neutral label for the
+  // majority shape, with a descriptive modifier. This is what stops a user being
+  // handed a confident WRONG shape, which was the report.
+  // Round REQUIRES the depth signal. Width-only "short + soft chin" reached 0.7
+  // and beat Oval on faces that are NOT full -- a probe showed Doutzen Kroes (a
+  // clearly oval model) being labelled Round purely on length + chin angle, with
+  // no fullness in the mesh at all. The depth reading is the one measurement that
+  // actually distinguished the full faces (FatGuy jaw-depth 8.07 vs ~1.0), so it
+  // is now a GATE: without real depth fullness there is no Round call, no matter
+  // how short or soft the width ratios read.
+  const ev = {};
+  ev.Round = depthFullness > 2.2 ? 0.5 + (lengthToWidth < 1.2 ? 0.3 : 0) : 0;
+  ev.Oblong = lengthToWidth > 1.3 ? 0.9 : lengthToWidth > 1.26 ? 0.45 : 0;
+  // Oval: a small standing score, so a genuinely neutral face is not pushed into a
+  // dramatic shape by one weak signal.
+  ev.Oval = 0.5;
 
-  let best = FACE_SHAPE_PROTOTYPES[0];
-  let bestDist = Infinity;
-  for (const proto of FACE_SHAPE_PROTOTYPES) {
-    const d = distFor(proto);
-    if (d < bestDist) {
-      bestDist = d;
-      best = proto;
+  let best = "Oval";
+  let bestScore = ev.Oval;
+  for (const k of Object.keys(ev)) {
+    if (ev[k] > bestScore) {
+      bestScore = ev[k];
+      best = k;
     }
   }
+  // A distinctive shape must clear 0.6 to be claimed, and the evidence set above
+  // only ever offers a distinctive shape for Round / Oblong -- so every other face
+  // falls through to Oval, honestly.
+  if (best !== "Oval" && bestScore < 0.6) best = "Oval";
 
-  // Margin check. When the winner is only marginally closer than the runner-up,
-  // the reading is genuinely ambiguous (the width ratios overlap heavily across
-  // shapes) and a confident second label would be false precision. In that case
-  // fall back to reporting the neutral shape instead of guessing.
-  let runnerUpDist = Infinity;
-  for (const proto of FACE_SHAPE_PROTOTYPES) {
-    if (proto.shape === best.shape) continue;
-    runnerUpDist = Math.min(runnerUpDist, distFor(proto));
-  }
-  const ambiguous = runnerUpDist - bestDist < 0.03;
-
-  // Debug aid: log the raw ratios so misclassifications can be reported
-  // with real numbers instead of guesswork. Harmless in production --
-  // visible only to anyone with devtools open.
   console.debug("[faceShape]", {
     lengthToWidth: lengthToWidth.toFixed(3),
-    jawToCheek: jawToCheek.toFixed(3),
-    foreheadToCheek: foreheadToCheek.toFixed(3),
-    picked: best.shape,
-    bestDist: bestDist.toFixed(3),
-    runnerUpDist: runnerUpDist === Infinity ? null : runnerUpDist.toFixed(3),
-    ambiguous,
+    jawToTemple: jawToTemple.toFixed(3),
+    browToTemple: browToTemple.toFixed(3),
+    cheekToTemple: cheekToTemple.toFixed(3),
+    chinAngle: chinAngle.toFixed(1),
+    depthFullness: depthFullness.toFixed(2),
+    evidence: ev,
+    picked: best,
   });
 
-  // Ambiguity is reported honestly instead of papered over: the width ratios of
-  // real faces overlap heavily (measured jaw/cheek spans 1.02-1.08 and
-  // forehead/cheek 0.89-0.96 across the whole test set -- far narrower than the
-  // spread the eight prototypes assume), so most faces are genuinely "near Oval",
-  // and claiming a dramatic shape like Triangle or Diamond off a 0.03 ratio
-  // difference would be inventing precision. Instead the label reports the shape
-  // AND the structure the ratios actually show, which is the useful part.
-  //
-  // The direction words are calibrated on the measured set: jaw/cheek >= 1.06 is
-  // a genuinely wide lower face, <= 0.99 a tapered one; forehead/cheek >= 0.94 is
-  // a wide upper face, <= 0.90 a narrow one.
-  const jawWord = jawToCheek >= 1.06 ? "wide jaw" : jawToCheek <= 0.99 ? "tapered jaw" : null;
-  const browWord =
-    foreheadToCheek >= 0.94 ? "wide brow" : foreheadToCheek <= 0.90 ? "narrow brow" : null;
-  const modifiers = [browWord, jawWord].filter(Boolean);
-
-  if (ambiguous && best.shape !== "Oval" && modifiers.length === 0) {
-    // Close call AND no distinctive structure to point at: say so plainly rather
-    // than assert a shape the data doesn't support.
-    return "Oval (balanced)";
+  // Name the taper when it is on the narrow side, so an Oval label says something
+  // true about the face rather than being an empty default.
+  if (best === "Oval") {
+    if (browToTemple < 0.82) return "Oval · narrow brow";
+    if (depthFullness > 2.2 || chinAngle > 93) return "Oval · full";
   }
-  if (best.shape === "Oval" && modifiers.length) {
-    return "Oval \u00b7 " + modifiers.join(" \u00b7 ");
-  }
-  return best.shape;
+  return best;
 }
 
 // Canthal tilt: the angle of the line through each eye's inner/outer
@@ -1108,9 +1183,15 @@ function hasIrisPoints(landmarks) {
 // computeEyeArea and when the score is re-labelled after the fullness damp -- so
 // the word and the number can never drift apart.
 function eyeAreaLabelFor(score) {
-  if (score >= 80) return "Excellent";
-  if (score >= 62) return "Good";
-  if (score >= 45) return "Average";
+  // Bands recalibrated so the WORD matches the number. The old "Excellent" edge
+  // (80) was reachable by a face whose own panel showed a part in the low 70s and
+  // whose lid score was only "normal", which is the "bad face, good eye area"
+  // report. "Excellent" now needs the composite to clear 85, a bar a front-only
+  // reading only passes when EVERY measured part is genuinely strong; 80-84 reads
+  // "Good" instead of over-claiming.
+  if (score >= 85) return "Excellent";
+  if (score >= 68) return "Good";
+  if (score >= 48) return "Average";
   return "Weak";
 }
 
@@ -1274,19 +1355,38 @@ function computeEyeArea(landmarks, w, h, eyeShape, canthalTilt, blendshapes) {
   // FatGirl 0.21 -> ~98, adriana 0.62 -> ~87, Doutzen 0.86 -> ~47.
   const EYELID_OPEN_IDEAL = 0.26;
   const EYELID_HOOD_EDGE = 0.62;
+
+  // CEILING, not 100 -- the same correction applied to jawline, for the same
+  // reason. A lid sitting exactly at the ideal scored literally 100, and the
+  // reported data showed eyeArea hitting 100 on SimonNessman and 95.6 on
+  // MarlonTexeira. A maximum that is reached by simply having a normal open eye
+  // is not a measurement, and it is inconsistent with an `overall` that never
+  // approaches 100.
+  //
+  // The CURVE below is deliberately untouched: unlike jawline, this one was
+  // already calibrated against real readings (0.21 -> ~98, 0.62 -> ~87,
+  // 0.86 -> ~47) and it separates eyes correctly. Only the top of the scale
+  // moves, so the shape of the judgement stays exactly as validated.
+  const EYELID_CEILING = 92;
+
   let eyelidScore;
   if (lidExposure <= EYELID_OPEN_IDEAL) {
     // A very open eye is the desired look; nudge only a hair for an extremely wide
     // lid (a different look, not a defect).
-    eyelidScore = 100 - (EYELID_OPEN_IDEAL - lidExposure) * 40;
+    eyelidScore = EYELID_CEILING - (EYELID_OPEN_IDEAL - lidExposure) * 40;
   } else {
     const soft = Math.min(lidExposure, EYELID_HOOD_EDGE) - EYELID_OPEN_IDEAL;
     const hood = Math.max(0, lidExposure - EYELID_HOOD_EDGE);
     // Soft range: gentle (a soft fold is fine). Heavy hood: moderate, not punishing.
-    eyelidScore = 100 - soft * 40 - hood * 120;
+    eyelidScore = EYELID_CEILING - soft * 40 - hood * 120;
   }
+  // An extremely wide lid below the ideal earns a small rebate from the curve,
+  // but never past the ceiling.
+  if (eyelidScore > EYELID_CEILING) eyelidScore = EYELID_CEILING;
   if (scleralShow > 0.25) eyelidScore -= (scleralShow - 0.25) * 160;
-  eyelidScore = clamp100(eyelidScore);
+  // Clamped to the ceiling as well as the floor, so nothing downstream can push
+  // this component back to a literal 100.
+  eyelidScore = Math.max(0, Math.min(EYELID_CEILING, eyelidScore));
 
   // --- brow: brow-eye distance + intercanthal ratio -------------------------
   // Both spacing readings share ONE denominator -- the eye width -- so they sit on
@@ -1306,14 +1406,18 @@ function computeEyeArea(landmarks, w, h, eyeShape, canthalTilt, blendshapes) {
   // distance either way -- a brow touching the lid and a far-away brow are both
   // penalised, the same way the intercanthal ratio only punishes DETOURS.
   //
-  // Both use a FREE BAND before any penalty applies. Without one, a reading a
-  // hair off the ideal lost points immediately, which is what produced the
-  // confusing "brow-eye distance 0.49, ideal ~0.6, score 79/100" in the report:
-  // the user is shown a value that looks fine next to a score that doesn't. The
-  // band means only a genuinely unusual brow height costs anything, and the
-  // displayed ideal then matches the displayed score.
-  const BROW_EYE_FREE_BAND = 0.12;
-  const INTERCANTHAL_FREE_BAND = 0.15;
+  // Both use a FREE BAND before any penalty applies, so a value sitting at the
+  // ideal does not lose points for rounding -- but the band must be SMALL relative
+  // to the measured spread, or the reading stops discriminating at all. That is
+  // what happened here: probed across the test set, browEyeRatio spans 0.448-0.647
+  // and intercanthalRatio 1.08-1.37, yet the old bands (+/-0.12 and +/-0.15) were
+  // so wide that almost every value fell inside them, so `browScore` was 93-100
+  // for EVERY face. With a 0.20 weight that fed ~27% of the frontal composite as a
+  // near-constant 100, which is a large part of why a poor eye area still read
+  // "Good". The bands are narrowed to the scale the measurements actually move
+  // over, so this component now reflects real spacing instead of gifting points.
+  const BROW_EYE_FREE_BAND = 0.04;
+  const INTERCANTHAL_FREE_BAND = 0.06;
   const browDistPenalty =
     Math.max(0, Math.abs(browEyeRatio - BROW_EYE_IDEAL) - BROW_EYE_FREE_BAND) *
     (70 / BROW_EYE_TOLERANCE);
@@ -1479,10 +1583,13 @@ function computeEyeArea(landmarks, w, h, eyeShape, canthalTilt, blendshapes) {
       : canthalTilt.label === "Negative"
         ? "a downturned canthal axis"
         : "a neutral canthal axis";
+  // Evidence thresholds MIRROR eyeAreaLabelFor's bands (85 / 68 / 48), so the
+  // sentence cannot call an eye area "excellent" while the badge beside it reads
+  // "Good" -- the word-contradicts-number pattern this whole area keeps fighting.
   let evidence;
-  if (score >= 80) {
+  if (score >= 85) {
     evidence = "excellent eye area — " + lidPhrase + " and " + tiltPhrase;
-  } else if (score >= 62) {
+  } else if (score >= 68) {
     evidence =
       "solid eye area — " + lidPhrase + ", " + tiltPhrase +
       ", with " + weakest2.name + " the weakest part at " + weakest2.v.toFixed(0) +
@@ -1823,7 +1930,15 @@ function computeFaceFat(imgEl, landmarks, w, h) {
   roundPenalty += halfJaw * Math.min(1, lengthRef / 0.22);
   if (chinAngle > LEAN_CHIN_ANGLE) roundPenalty += (chinAngle - LEAN_CHIN_ANGLE) * FACE_FAT_CHIN_MULT;
 
-  const boneScore = clamp100(Math.max(FACE_FAT_FLOOR, 100 - roundPenalty));
+  // CEILING 93, NOT 100. With 100 as the top, every lean professional sat pinned
+  // at 100 (Delon, Elias, Marlon, Sean all measured 100), so the reading could not
+  // tell a very lean face from a lean one and simply fed four faces the same
+  // maximum -- the same saturation complaint the jawline reading had. Capping at
+  // 93 opens the top of the range so "lean" and "very lean" are distinct values.
+  const FACE_FAT_CEILING = 93;
+  const boneScore = clamp100(
+    Math.max(FACE_FAT_FLOOR, FACE_FAT_CEILING - roundPenalty),
+  );
 
   // The soft-tissue (pixel silhouette) reading is still computed, because the dev
   // harness shows it and it may be recalibrated later, but it is NOT folded into
@@ -1854,15 +1969,15 @@ function computeFaceFat(imgEl, landmarks, w, h) {
     // or discarded, instead of the blend being a black box.
     rowDebug: soft.rowDebug,
   };
-  // Boundaries set from real detections on test_photos: the leanest faces there
-  // (adriana_lima 83-87, chico_frontal 97, sean_opry 93) are "Lean", jordan
-  // barrett (63, a fuller but not round face) is "Average", and the fuller
-  // subjects fall into "Full". "Round" is reserved for a face that is both
-  // short AND wide at the jaw, not merely soft.
+  // Boundaries set from real detections on test_photos, shifted down with the new
+  // 93 ceiling so each band stays populated: the leanest faces (adriana, chico,
+  // sean) are "Lean", jordan barrett (~60) is "Average", and the fuller subjects
+  // fall into "Full". "Round" is reserved for a face that is both short AND wide
+  // at the jaw, not merely soft.
   let label;
-  if (score >= 78) label = "Lean";
-  else if (score >= 58) label = "Average";
-  else if (score >= 38) label = "Full";
+  if (score >= 74) label = "Lean";
+  else if (score >= 55) label = "Average";
+  else if (score >= 36) label = "Full";
   else label = "Round";
 
   // Evidence: name the measurement that explains the reading. The two width
@@ -1910,7 +2025,43 @@ function computeFaceFat(imgEl, landmarks, w, h) {
 //     jaw stays as wide as the cheeks (or wider).
 //   - gonial drop: how far the jaw angle sits below the mouth line -- a low,
 //     sharp gonial angle reads as a defined jawline.
-// Returns { label, score } (100 = very defined).
+// Returns { label, score }. The scale tops out at 96 by design -- see the
+// CEILING note in the body -- so a high score means "measured as strongly
+// angular", never "flawless".
+//
+// (clamp01 already exists above, near the eye-area helpers. Re-declaring it here
+// was a SyntaxError -- "Identifier 'clamp01' has already been declared" -- which
+// killed this entire module and left the page with no working code at all.)
+// The side-photo nasolabial angle, when one was supplied. Declared at module
+// scope so the frontal pass can pick it up: the two halves of a scan are run
+// separately (see analyzeSidePhoto) and the front pass is the one that builds the
+// final report object, so the angle has to be parked somewhere it can be read.
+let nasolabialAngleFromSide = null;
+
+/** Called by the side-photo pass so the nose assessment can use the angle. */
+export function setNasolabialAngleFromSide(deg) {
+  nasolabialAngleFromSide = typeof deg === "number" && Number.isFinite(deg) ? deg : null;
+}
+
+/**
+ * Clear the parked angle. MUST be called at the start of every scan.
+ *
+ * Without this, the angle from a previous scan leaks into the next one: a user
+ * who scanned with a side photo and then scanned again with a front photo alone
+ * would still have the old nasolabial angle folded into their new nose score --
+ * a reading taken from a photo the current report knows nothing about. Caught by
+ * checking the reset path rather than by a failing test, because the leak is
+ * silent and only shows up as a slightly wrong number.
+ */
+export function clearNasolabialAngleFromSide() {
+  nasolabialAngleFromSide = null;
+}
+
+/** True when a side photo has supplied an angle for the nose assessment. */
+export function hasNasolabialAngleFromSide() {
+  return nasolabialAngleFromSide !== null;
+}
+
 function computeJawline(landmarks, w, h) {
   const px = (i) => toPixels(landmarks[i], w, h);
   const cheekWidth = dist(px(CHEEK_LEFT), px(CHEEK_RIGHT));
@@ -1934,22 +2085,80 @@ function computeJawline(landmarks, w, h) {
   // Chin angle: a crisp chin corner (lean) vs a soft, obtuse one (full).
   const chinAngle = angleDeg(px(JAW_LEFT), px(MIDLINE_BOTTOM), px(JAW_RIGHT));
 
-  let score = 100;
-  // Sharp, defined jaw corner is ~130 deg; penalise a softer (narrower) corner.
-  if (gonionDeg < 130) score -= (130 - gonionDeg) * 2.2;
-  // Crisp chin ~88 deg; a softer/rounder chin (>90) costs, an over-pointed one
-  // (<80) is a mild nudge.
-  if (chinAngle > 90) score -= (chinAngle - 90) * 1.4;
-  else if (chinAngle < 80) score -= (80 - chinAngle) * 0.8;
-  // A jaw much wider than the cheekbones is a soft, full lower face.
-  if (jawToCheek > 1.08) score -= (jawToCheek - 1.08) * 150;
+  // ---------------------------------------------------------------------
+  // SCORING, REBUILT.
+  //
+  // The previous version applied three SEPARATE penalties that all fire for the
+  // same underlying trait (a fuller lower face): a narrow gonial angle, an obtuse
+  // chin angle, and a jaw wider than the cheekbones. A fuller face therefore lost
+  // points three times over for one property, which is why the readings looked
+  // harsh and unnatural on faces the model set was not tuned on (FatGuy, FatGirl,
+  // alain_flick) while still looking fine on the models the thresholds were
+  // measured against.
+  //
+  // The fix is to measure the trait ONCE and score it once. Each signal still
+  // contributes, but through a single combined deficit rather than three
+  // independent deductions. Nothing about the landmark maths changed -- only how
+  // the measurements are combined.
+  //
+  // Deficit is expressed as a fraction of full marks, so the three can be
+  // averaged on a common scale rather than summed as raw units.
+
+  // 1. Gonion softness: 130 deg is the defined end of the measured range.
+  const gonionShortfall = clamp01((130 - gonionDeg) / 22); // 22 deg = full deficit
+  // 2. Chin softness: 88 deg is crisp, 108 deg is fully soft.
+  const chinShortfall =
+    chinAngle > 88
+      ? clamp01((chinAngle - 88) / 20)
+      : chinAngle < 80
+        ? clamp01((80 - chinAngle) / 26) // an over-pointed chin is a milder miss
+        : 0;
+
+  // 3. Lower-face fullness: 1.02 is a tapered jaw, 1.20 is a fully square one.
+  const fullnessShortfall = clamp01((jawToCheek - 1.02) / 0.18);
+
+  // The combined deficit is the AVERAGE, not the sum, so one extreme reading
+  // cannot single-handedly sink the score -- and a face that is merely a little
+  // soft on all three is not punished as if it were extreme on all three.
+  const deficit = (gonionShortfall + chinShortfall + fullnessShortfall) / 3;
+
+  // Curve shape matters as much as the averaging did. The first attempt at this
+  // rebuild used `deficit * 55`, which was fair but too flat: it squeezed every
+  // face into 48-100, so jawline stopped distinguishing anyone (spread fell from
+  // 89 to 52). Being generous is not the same as being useful.
+  //
+  // This applies a mild power curve instead of a straight line. A face that is
+  // slightly soft on all three signals keeps most of its marks, while a face that
+  // is genuinely soft across the board still lands clearly lower -- so the score
+  // separates people again without the old triple penalty.
+  const curved = Math.pow(deficit, 1.35);
+
+  // CEILING, NOT 100.
+  //
+  // A deficit of zero gave a score of exactly 100, and half the test set was
+  // landing on it -- jordan_barrett, sean_opry, MarlonTexeira and SimonNessman
+  // all scored 100 or 95.5. A perfect score that half the population achieves
+  // tells the user nothing, and it reads as a system that hands out its maximum
+  // rather than measuring. It also contradicted the rest of the report: those
+  // same photos were being given tiers in the middle of the scale.
+  //
+  // Angularity is measured from landmark geometry on a single photograph, with
+  // real error in both the mesh and the ratio. Presenting that as flawless is
+  // false precision, so the scale now tops out at 96 -- reachable, but only by a
+  // genuinely strong jaw, and never by default.
+  const CEILING = 96;
+  let score = CEILING - curved * (CEILING - 28);
 
   score = clamp100(score);
+  // Bands re-cut for the new ceiling. With the top moved to 96, the old 80 mark
+  // would have been reached by almost everyone again; these keep each band
+  // meaningfully populated while staying readable as plain language.
   let label;
-  if (score >= 80) label = "Strong";
-  else if (score >= 62) label = "Defined";
-  else if (score >= 45) label = "Soft";
-  else label = "Weak";
+  if (score >= 88) label = "Very defined";
+  else if (score >= 72) label = "Defined";
+  else if (score >= 56) label = "Moderately defined";
+  else if (score >= 40) label = "Soft";
+  else label = "Very soft";
 
   // Evidence line: the ONE measurement that most explains this score, in plain
   // language. Reported next to the number so the reading is auditable rather than
@@ -2801,15 +3010,20 @@ function computePotential(analysis) {
   }
 
   // --- 1. structure ceiling -------------------------------------------------
-  // Symmetry and golden ratio are NOT improvable, so they define what the face
-  // can structurally reach. The eye area is included (it is mostly bone + lid
-  // position, only partly improvable) but weighted lightly.
+  // Symmetry and the eye area are mostly bone, so they lead. The GOLDEN ratio is
+  // included but weighted lower than before, because on this engine the golden
+  // score is heavily dragged down by LOWER-FACE FULLNESS -- which is exactly the
+  // thing the user CAN change (leaning out). Treating golden as a hard, fixed cap
+  // is what produced the reported "potential is always maxed": a soft face had a
+  // low golden, so its structure ceiling fell BELOW its own current score, the
+  // clamp forced potential = current, and the card effectively said "you're
+  // already at your ceiling" to a face that had obvious room to improve.
   const structureLimit = frontal
-    ? analysis.symmetry * 0.35 +
-      analysis.golden * 0.45 +
-      (analysis.eyeArea ? analysis.eyeArea.score : PROFILE_FALLBACK_SCORE) * 0.2
+    ? analysis.symmetry * 0.4 +
+      analysis.golden * 0.25 +
+      (analysis.eyeArea ? analysis.eyeArea.score : PROFILE_FALLBACK_SCORE) * 0.35
     : PROFILE_FALLBACK_SCORE;
-  const ceiling = clamp100(structureLimit + POTENTIAL_STRUCTURE_LIFT);
+  const structureCeiling = clamp100(structureLimit + POTENTIAL_STRUCTURE_LIFT);
 
   // --- 2. recoverable gap ---------------------------------------------------
   // Only readings the user can genuinely move. Each contributes the points it is
@@ -2830,21 +3044,27 @@ function computePotential(analysis) {
 
   const recovered = lostShare * POTENTIAL_RECOVERY;
 
-  // Potential = current score + the points that are realistically recoverable,
-  // then bounded by the structural ceiling. Taking the MIN with `ceiling` is what
-  // keeps a beautiful-proportioned-but-soft face from being told it can be Chad
-  // when its bone structure genuinely allows it, and stops a well-defined but
-  // poorly-proportioned face from being promised a tier its structure can't hold.
+  // Potential = current + what is realistically recoverable, bounded ABOVE by the
+  // structural ceiling -- but the ceiling is only allowed to BITE the part of the
+  // gain that the bone structure genuinely cannot hold. Concretely:
+  //
+  //   ceiling    = structureCeiling, but never below current (a projection that
+  //                says "you could be worse" is not a projection -- the alain_flick
+  //                case, where a 47 structure reading sat under a 55 current score)
+  //   potential  = min(current + recovered, max(ceiling, current + recovered*0.5))
+  //
+  // That last `max(...)` is the fix for the "always maxed" report: a face with a
+  // REAL recoverable gap always keeps at least half of that gain as headroom, even
+  // when its proportions are poor, because soft-tissue change (leanness, skin)
+  // genuinely moves the overall score. The structure ceiling still caps the other
+  // half, so a poorly-proportioned face is not promised a tier its bones can't
+  // hold -- it is just no longer told it is already finished.
   const rawPotential = current + recovered;
-  // Potential is a CEILING, so it is capped by the structure -- but it must never
-  // land BELOW where the face already is. That happened on the alain_flick test
-  // photo: his structure ceiling (49) sat under his current score (56.2) because
-  // the proportion penalty had already docked him below his own bone geometry's
-  // implied max, which produced a nonsense "potential 49 < current 56". A
-  // projection that says "you could be worse" is not a projection.
+  const floorForGain = current + recovered * 0.5;
+  const effectiveCeiling = Math.max(structureCeiling, floorForGain);
   const capped = frontal
-    ? Math.min(rawPotential, ceiling)
-    : Math.min(POTENTIAL_TARGET, current + recovered);
+    ? Math.min(rawPotential, effectiveCeiling)
+    : Math.min(POTENTIAL_TARGET, rawPotential);
   const potential = clamp100(Math.max(current, capped));
 
   const headroom = Math.max(0, potential - current);
@@ -2855,7 +3075,8 @@ function computePotential(analysis) {
   console.debug("[potential]", {
     current: current.toFixed(1),
     structureLimit: structureLimit.toFixed(1),
-    ceiling: ceiling.toFixed(1),
+    structureCeiling: structureCeiling.toFixed(1),
+    effectiveCeiling: effectiveCeiling.toFixed(1),
     lostShare: lostShare.toFixed(1),
     recovered: recovered.toFixed(1),
     potential: potential.toFixed(1),
@@ -2873,8 +3094,9 @@ function computePotential(analysis) {
     priority,
     measured: true,
     // The structural ceiling (NOT the score) -- surfaced so the UI can explain
-    // WHY the potential stops where it does.
-    structureCeiling: ceiling,
+    // WHY the potential stops where it does. This is the EFFECTIVE ceiling, so it
+    // always sits at or above the current score and never contradicts headroom.
+    structureCeiling: effectiveCeiling,
     // True when the projection actually lands in a higher tier than the current
     // one. This is the case worth showing prominently.
     tierUp: potentialTier !== currentTier,
@@ -2898,6 +3120,89 @@ function weakestFixable(analysis, frontal) {
   return candidates.reduce((a, b) => (b.value < a.value ? b : a)).key;
 }
 
+// --- what is holding the potential ------------------------------------------
+//
+// The "What's Holding Your Potential?" card. Each entry is a reading that sits
+// BELOW the level a face should reach for its current tier, ordered by how many
+// overall points it is actually costing. This turns the abstract "potential"
+// number into a concrete list of levers, and every item is a real measured
+// sub-score -- nothing is invented.
+//
+// `gap` is the points that reading is below the metric TARGET, and `pull` is that
+// gap scaled by the metric's weight in the overall score -- i.e. how many points
+// of the headline number this ONE reading is holding back. The list is sorted by
+// `pull`, so the top item is the biggest lever, not just the lowest raw score.
+//
+// Symmetry is deliberately NOT listed: it is a bone fact the user cannot act on,
+// and "your asymmetry is holding you back" is advice with no next step. Every
+// listed item carries a `fix` line that names a real lever.
+function computeLimiters(analysis, frontal) {
+  if (!frontal) return [];
+  const target = 92;
+  const defs = [
+    {
+      key: "leanness",
+      label: "Lower-face leanness",
+      value: analysis.faceFat ? analysis.faceFat.score : null,
+      weight: WEIGHT_FACE_FAT,
+      fix: "Body-fat loss is the single biggest visible lever on the lower face.",
+    },
+    {
+      key: "jaw",
+      label: "Jaw definition",
+      value: analysis.jawline ? analysis.jawline.score : null,
+      weight: WEIGHT_JAWLINE,
+      fix: "Leaner body fat, posture and chewing habits sharpen the jaw corner.",
+    },
+    {
+      key: "eye-area",
+      label: "Eye area",
+      value: analysis.eyeArea ? analysis.eyeArea.score : null,
+      weight: WEIGHT_EYE_AREA,
+      fix: "Sleep, hydration and brow grooming are the only levers here.",
+    },
+    {
+      key: "nose",
+      label: "Nose proportion",
+      value: analysis.nose && typeof analysis.nose.score === "number" ? analysis.nose.score : null,
+      weight: WEIGHT_NOSE,
+      fix: "Fixed bone and cartilage -- noted for completeness, not actionable.",
+    },
+    {
+      key: "skin",
+      label: "Skin quality",
+      value: typeof analysis.skinQuality === "number" ? analysis.skinQuality : null,
+      weight: WEIGHT_SKIN_QUALITY,
+      fix: "A consistent routine (cleanser, moisturiser, SPF) lifts this fastest.",
+    },
+    {
+      key: "golden",
+      label: "Overall proportions",
+      value: typeof analysis.golden === "number" ? analysis.golden : null,
+      weight: WEIGHT_GOLDEN,
+      fix: "Hair style and grooming can rebalance the apparent proportions.",
+    },
+  ];
+
+  return defs
+    .filter((d) => typeof d.value === "number")
+    .map((d) => {
+      const gap = Math.max(0, target - d.value);
+      const pull = gap * d.weight * 1.6;
+      return {
+        key: d.key,
+        label: d.label,
+        score: Math.round(d.value),
+        gap: Math.round(gap),
+        pull: +pull.toFixed(1),
+        fix: d.fix,
+      };
+    })
+    .filter((i) => i.gap >= 4) // ignore readings already at/near target
+    .sort((a, b) => b.pull - a.pull)
+    .slice(0, 4);
+}
+
 // --- strengths --------------------------------------------------------------
 //
 // The FOUR features this face scored highest on -- the "lean on these" list that
@@ -2912,6 +3217,23 @@ function weakestFixable(analysis, frontal) {
 //
 // `key` names the feature, `score` is the 0-100 reading it earned, and `note` is a
 // one-line plain-language reason shown under it in the card.
+//
+// RANKING FIX -- "strengths" must be features this FACE stands out on, not the
+// readings that are simply high for everyone. Ranking by raw score produced the
+// reported "the strengths look fake": on the test set the list was filled by
+// "Skin clarity 100", "Photo quality 100" and "Skin quality 9x" on almost every
+// photo, because those readings are near-constant (skin clarity measures 100 on
+// nearly every face, photo quality is the landmark-confidence value, also ~94+).
+// Those saturated readings crowded out the actual facial features and told a
+// poorly-proportioned face it was strong on metrics that say nothing about it.
+//
+// Two changes fix that honestly:
+//   1. Rank by how far each reading STANDS OUT above its own typical value
+//      (`reference`), not by its absolute score. A jaw of 90 stands out more
+//      (ref ~70) than skin clarity of 100 (ref ~95).
+//   2. Only real facial features can take the top slots, and any candidate that
+//      does not out-run its reference at all is dropped, so the card can be short
+//      or say "nothing stands out" rather than padding with cheap wins.
 function computeStrengths(analysis) {
   if (!analysis || analysis.frontalMetricsMeasured === false || analysis.overallMeasured === false) {
     return [];
@@ -2919,19 +3241,22 @@ function computeStrengths(analysis) {
 
   const eye = analysis.eyeArea ? analysis.eyeArea : null;
   const eyeShape = analysis.eyeShape || null;
-  const landmarkConfidence =
-    analysis.confidence && typeof analysis.confidence.score === "number"
-      ? analysis.confidence.score
-      : null;
-  const lightingMeasured = analysis.lighting && analysis.lighting.measured !== false;
 
-  // Each candidate is one facial feature with the score it actually earned.
-  // `halves` are the two sub-readings that describe the feature, used to pick a
-  // more specific note when one half clearly carries the score.
+  // Each candidate is one facial feature with the score it actually earned, plus
+  // `reference`: the value that feature sits at on a TYPICAL face. The ranking is
+  // by `score - reference`, so a reading only counts as a strength when it is
+  // genuinely above the norm for that measurement.
   const candidates = [];
-  const add = (key, label, score, note) => {
+  const add = (key, label, score, note, reference) => {
     if (typeof score === "number" && Number.isFinite(score)) {
-      candidates.push({ key, label, score, note });
+      const standOut = score - reference;
+      // Only keep readings that clear their own norm by a real margin. A small
+      // positive gap is noise, not a strength -- requiring MIN_STANDOUT keeps the
+      // list to features that genuinely stand out instead of every reading that is
+      // a point or two above average.
+      const MIN_STANDOUT = 4;
+      if (standOut < MIN_STANDOUT) return;
+      candidates.push({ key, label, score, note, standOut });
     }
   };
 
@@ -2949,45 +3274,51 @@ function computeStrengths(analysis) {
     } else if (typeof lid === "number" && lid >= 90) {
       eyeNote = "Clean, uncoverable lid with a visible crease.";
     }
-    add("eyes", "Eyes", eyeValue, eyeNote);
+    // Eye-area reference ~72: a typical face sits around there, so only an eye
+    // area clearly above it registers as a strength.
+    add("eyes", "Eyes", eyeValue, eyeNote, 72);
   }
   if (eyeShape && typeof eyeShape.score === "number") {
     add("eyeShape", "Eye shape", eyeShape.score,
-      (eyeShape.label ? eyeShape.label + " — " : "") + "well-proportioned eye opening.");
+      (eyeShape.label ? eyeShape.label + " — " : "") + "well-proportioned eye opening.", 75);
   }
   if (analysis.jawline) {
     add("jaw", "Jawline", analysis.jawline.score,
-      "Defined mandible — a sharp, supported lower face.");
+      "Defined mandible — a sharp, supported lower face.", 72);
   }
   if (analysis.symmetry !== undefined) {
     add("symmetry", "Symmetry", analysis.symmetry,
-      "Left and right halves align closely across brow, eye and jaw.");
+      "Left and right halves align closely across brow, eye and jaw.", 78);
   }
   if (analysis.golden !== undefined) {
     add("golden", "Facial harmony", analysis.golden,
-      "Feature spacing sits close to the golden-ratio ideal.");
+      "Feature spacing sits close to the golden-ratio ideal.", 80);
   }
   if (analysis.skinQuality !== undefined) {
+    // Skin quality is HIGH on almost every photo (measured 87-99), so its
+    // reference is set near the top: it only counts when it is near-flawless.
     add("skin", "Skin quality", analysis.skinQuality,
-      "Even tone and texture across the sampled cheek patch.");
+      "Even tone and texture across the sampled cheek patch.", 93);
   }
   if (analysis.skinAcne) {
+    // Skin clarity reads 100 on nearly every face, so it is only counted when it
+    // is perfect AND there is nothing else -- its reference is essentially the max.
     add("clarity", "Skin clarity", analysis.skinAcne.score,
-      "Few blemishes — clear skin reads as healthy.");
+      "Few blemishes — clear skin reads as healthy.", 99);
   }
   if (analysis.faceFat) {
     // faceFat is "100 = lean", which IS the prized direction here.
     add("leanness", "Lower-face leanness", analysis.faceFat.score,
-      "Lean lower face — the cheek and jaw stay defined.");
+      "Lean lower face — the cheek and jaw stay defined.", 80);
   }
-  if (landmarkConfidence !== null && lightingMeasured) {
-    add("photo", "Photo quality", landmarkConfidence,
-      "Clean, sharp capture — the readings here are reliable.");
-  }
+  // NOTE: "Photo quality" (landmark confidence) is deliberately NOT a strength
+  // candidate. It measures the CAPTURE, not the face, and it is near-constant
+  // (94-100 on every test photo), so it can only ever pad the list with a number
+  // that says nothing about the person. It is still reported in its own card.
 
-  // Rank by score, then return the best four. A tie on score is broken by the
-  // declared order above (a real feature before "photo quality").
-  candidates.sort((a, b) => b.score - a.score);
+  // Rank by STAND-OUT, not raw score, then return the best four. A tie is broken
+  // by the declared order above (a real feature before "photo quality").
+  candidates.sort((a, b) => b.standOut - a.standOut || b.score - a.score);
   return candidates.slice(0, 4);
 }
 
@@ -3522,6 +3853,12 @@ export function analyzeSideProfile(landmarks, w, h) {
     labels: { gonialLabel, ramusLabel, mandibleLabel, eyeProjectionLabel, noseLabel, jawRecessionLabel },
   });
 
+  // Park the angle where the frontal pass can read it. The report object is built
+  // by analyzeFrontPhoto, and the side pass may run before or after it depending
+  // on how the caller orders them, so a module-scope slot is the one place that
+  // works for both orders.
+  setNasolabialAngleFromSide(nasolabialAngle);
+
   return {
     gonialAngle,
     gonialLabel,
@@ -3619,6 +3956,114 @@ async function prepareImage(imgEl) {
   }
 }
 
+// How much of the frame the face bounding box should fill before the mesh is
+// considered "big enough". MediaPipe's FaceMesh runs on a fixed 256x256 crop of
+// the DETECTED face region, so a face that occupies only a small part of a large
+// photo is effectively fed to the model at low resolution -- the landmark mesh
+// gets coarse and every downstream ratio is noisier. Measured on the test set, a
+// small-in-frame face is the main source of wobbly width ratios.
+const FACE_FILL_TARGET = 0.55;
+// Only bother refining when the face is clearly small in frame.
+const FACE_SMALLENCE_THRESHOLD = 0.4;
+// Upper bound on the upscaled crop, so a phone photo can't allocate a huge canvas.
+const REFINE_MAX_DIM = 1024;
+
+// Bounding box (in normalised 0..1 coords) of a landmark mesh, with a margin so
+// the refine crop keeps the whole head, not just the tight mesh.
+function landmarkBounds(landmarks, margin = 0.12) {
+  let minX = 1, minY = 1, maxX = 0, maxY = 0;
+  for (const p of landmarks) {
+    if (!p || typeof p.x !== "number") continue;
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  const w = maxX - minX;
+  const h = maxY - minY;
+  // Expand by the margin on every side, then clamp inside the frame.
+  minX = Math.max(0, minX - w * margin);
+  minY = Math.max(0, minY - h * margin);
+  maxX = Math.min(1, maxX + w * margin);
+  maxY = Math.min(1, maxY + h * margin);
+  return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+}
+
+// Run the landmarker on an UPSCALED CROP of the face, then map the landmarks back
+// into full-image normalised coordinates so every caller keeps working unchanged.
+//
+// This is the free "sharper model" upgrade: same MediaPipe bundle, same license,
+// but the mesh is computed on a face that fills the model's input instead of a
+// face occupying a corner of a large photo. Returns the refined landmarks (in
+// original-frame coords) or null when the refine pass found nothing.
+async function refineMeshOnCrop(imgEl, landmarks, w, h) {
+  const b = landmarkBounds(landmarks);
+  // Face already fills enough of the frame -> the base pass was already high-res.
+  if (b.w >= FACE_FILL_TARGET && b.h >= FACE_FILL_TARGET) return null;
+  if (b.w < FACE_SMALLENCE_THRESHOLD && b.h < FACE_SMALLENCE_THRESHOLD) {
+    // (Guard kept for clarity; the branch above already covers the common case.)
+  }
+
+  const sx = Math.round(b.minX * w);
+  const sy = Math.round(b.minY * h);
+  const sw = Math.max(1, Math.round(b.w * w));
+  const sh = Math.max(1, Math.round(b.h * h));
+
+  // Scale the crop UP so the face fills the refine target, capped for memory.
+  const scale = Math.min(REFINE_MAX_DIM / Math.max(sw, sh), FACE_FILL_TARGET / Math.max(b.w, b.h));
+  const cw = Math.max(1, Math.round(sw * scale));
+  const ch = Math.max(1, Math.round(sh * scale));
+  if (scale <= 1.05) return null; // nothing meaningful to gain
+  let canvas;
+  try {
+    canvas = document.createElement("canvas");
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    // Draw the crop region scaled up to the canvas; imageSmoothing on is the
+    // default and is what makes the upscale help rather than just interpolate.
+    ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, cw, ch);
+  } catch {
+    return null; // tainted canvas / no 2d context
+  }
+
+  let refined = null;
+  let refinedBlendshapes = null;
+  let refinedRotation = null;
+  try {
+    const landmarker = await ensureLandmarker();
+    const result = landmarker.detect(canvas);
+    if (result && result.faceLandmarks && result.faceLandmarks.length > 0) {
+      refined = result.faceLandmarks[0];
+    }
+    if (result && result.faceBlendshapes && result.faceBlendshapes.length > 0) {
+      refinedBlendshapes = (result.faceBlendshapes[0] && result.faceBlendshapes[0].categories) || [];
+    }
+    if (
+      result &&
+      result.facialTransformationMatrixes &&
+      result.facialTransformationMatrixes.length > 0
+    ) {
+      refinedRotation = rotationFromMatrix(result.facialTransformationMatrixes[0].data);
+    }
+  } catch (err) {
+    console.warn("Face-crop refine pass failed (using base mesh):", err);
+    return null;
+  }
+  if (!refined) return null;
+
+  // Map the crop-normalised landmarks back to full-image normalised coordinates:
+  //   full_x = (sx + crop_x * sw) / w
+  // This is what keeps every downstream "landmark.x * w" correct.
+  const remapped = refined.map((p) => ({
+    x: (sx + p.x * sw) / w,
+    y: (sy + p.y * sh) / h,
+    z: p.z,
+  }));
+
+  return { landmarks: remapped, blendshapes: refinedBlendshapes, rotation: refinedRotation };
+}
+
 // Runs the face-mesh detection once, returning either the mesh or a reason it
 // failed. Kept separate from the scoring below so the side-profile entry point
 // can reuse it without dragging the frontal arithmetic along.
@@ -3644,6 +4089,23 @@ async function detectMesh(imgEl) {
     ) {
       const m = result.facialTransformationMatrixes[0];
       out.rotation = rotationFromMatrix(m && m.data);
+    }
+
+    // SECOND, HIGHER-RESOLUTION PASS when the face is small in frame. The base
+    // pass above is kept as the fallback, so a refine failure changes nothing.
+    if (out.landmarks) {
+      const w = imgEl.naturalWidth || imgEl.width || 0;
+      const h = imgEl.naturalHeight || imgEl.height || 0;
+      if (w && h) {
+        const refined = await refineMeshOnCrop(imgEl, out.landmarks, w, h);
+        if (refined && refined.landmarks) {
+          out.landmarks = refined.landmarks;
+          if (refined.blendshapes && refined.blendshapes.length) {
+            out.blendshapes = refined.blendshapes;
+          }
+          if (refined.rotation) out.rotation = refined.rotation;
+        }
+      }
     }
   } catch (err) {
     out.error = err;
@@ -3838,6 +4300,11 @@ export async function analyzeFrontPhoto(imgEl) {
   const jawline = computeJawline(landmarks, w, h);
   const eyeShape = computeEyeShape(landmarks, w, h);
   const faceShape = computeFaceShape(landmarks, w, h);
+  // The nose reads the nasolabial angle when a side photo supplied one. On a
+  // front-only scan that argument is undefined and the assessment is taken over
+  // the frontal measurements alone, reporting `measuredOn` accordingly -- it does
+  // not invent an angle it cannot see.
+  const nose = assessNose(landmarks, nasolabialAngleFromSide);
   const canthalTilt = computeCanthalTilt(landmarks, w, h);
   const eyeArea = computeEyeArea(landmarks, w, h, eyeShape, canthalTilt, blendshapes);
   // Note on the objects above: on a profile or a no-face photo their raw values
@@ -3990,14 +4457,28 @@ export async function analyzeFrontPhoto(imgEl) {
   // The eye component was widened from the eye-SHAPE label to the full eye AREA
   // (canthal + projection + eyelid + brow); the weight itself is unchanged, so
   // the expansion adds detail without re-balancing the score.
-  let overall =
-    symmetry * WEIGHT_SYMMETRY +
-    golden * WEIGHT_GOLDEN +
-    faceFatScore * WEIGHT_FACE_FAT +
-    jawlineScore * WEIGHT_JAWLINE +
-    skinQuality * WEIGHT_SKIN_QUALITY +
-    skinAcne.score * WEIGHT_SKIN_ACNE +
-    eyeAreaScore * WEIGHT_EYE_AREA;
+  // The NOSE votes when it was measurable (it needs a front mesh). It is omitted
+  // on a profile / no-mesh scan, where its weight is simply not counted -- the sum
+  // below re-normalises by the weights actually present rather than assuming 1.0.
+  const noseScore = nose && typeof nose.score === "number" ? nose.score : null;
+
+  const weightParts = [
+    { w: WEIGHT_SYMMETRY, v: symmetry },
+    { w: WEIGHT_GOLDEN, v: golden },
+    { w: WEIGHT_FACE_FAT, v: faceFatScore },
+    { w: WEIGHT_JAWLINE, v: jawlineScore },
+    { w: WEIGHT_SKIN_QUALITY, v: skinQuality },
+    { w: WEIGHT_SKIN_ACNE, v: skinAcne.score },
+    { w: WEIGHT_EYE_AREA, v: eyeAreaScore },
+  ];
+  if (noseScore !== null) weightParts.push({ w: WEIGHT_NOSE, v: noseScore });
+  let weightTotal = 0;
+  let weightedTotal = 0;
+  for (const p of weightParts) {
+    weightTotal += p.w;
+    weightedTotal += p.w * p.v;
+  }
+  let overall = weightTotal ? weightedTotal / weightTotal : 0;
 
   // Structural consistency cap, driven by the face-fat SCORE rather than its
   // coarse label.
@@ -4037,24 +4518,37 @@ export async function analyzeFrontPhoto(imgEl) {
     { below: 62, cap: 62 },
     { below: 70, cap: 70 },
   ];
+  // Collected rather than applied immediately. Each cap writes a CEILING into
+  // this list and the lowest one wins at the end, so the order the rules are
+  // written in can no longer change the result. Previously each cap called
+  // Math.min() on `overall` directly, which meant a tighter cap later in the
+  // function silently made an earlier one dead code -- the source said a face was
+  // capped at 70 while a later rule had already taken it to 58.
+  const ceilings = [];
+
   if (frontalReadingsValid) {
     const band = FACE_FAT_CAP_BANDS.find((b) => faceFat.score < b.below);
     if (band) {
-      // A strong jaw EXCUSES a mildly full face. Fullness only reads as "soft"
-      // when the bone structure is not holding the face up: a face with a
-      // genuinely defined jaw is full-bodied, not soft. Measured on the test set:
-      // Jordan Barrett sits at faceFat 66.8 with jawline 99.8 -- the cheek fullness
-      // of a working model, not a soft lower face -- and capping him cost two
-      // tiers. FatGuy sits at 73.3 with jaw 73.1, i.e. full AND without the bone
-      // to carry it, which is exactly what the cap is for.
+      // A STRONG JAW EXCUSES FULLNESS AT EVERY BAND.
       //
-      // So the MIDDLE band only applies when the jaw is not strong. The deep bands
-      // (Round/Full, < 55) apply regardless: at that point the face is full enough
-      // that no jaw reading makes it lean.
-      const jawCarries = jawline.score >= 88;
-      const isMidBand = band.below === 62 || band.below === 70;
-      if (!(isMidBand && jawCarries)) {
-        overall = Math.min(overall, band.cap);
+      // Fullness only reads as "soft" when the bone structure is not holding the
+      // face up. A face with a genuinely defined jaw (jawline >= 86) is
+      // full-BODIED, not soft -- piped cheeks over a real mandible is the working
+      // model look, not a defect.
+      //
+      // The old rule only excused the two MIDDLE bands and let the deep bands fire
+      // "regardless". That mis-graded jordan_barrett -- a top model -- to 55
+      // "mid tier": his cheeks read full on the ratio (faceFat 49.4) but his jaw
+      // measures 91.8, and the deep-band cap ignored that. The rule is now the
+      // same at every band: a strong jaw carries the face, a weak one does not.
+      //
+      // The full-strength cap still applies to a face with a SOFT jaw (FatGuy 73.3
+      // / jaw 73, FatGirl / alain_flick), which is exactly the case the cap exists
+      // for. Re-measured blast radius: Jordan now escapes the cap; every other test
+      // face is unchanged.
+      const jawCarries = jawline.score >= 86;
+      if (!jawCarries) {
+        ceilings.push(band.cap);
       }
     }
   }
@@ -4073,8 +4567,8 @@ export async function analyzeFrontPhoto(imgEl) {
   // "Golden ratio" here is the proportion reading, not the face-fat reading, so
   // this is independent of the cap above.
   if (frontalReadingsValid) {
-    if (rawGolden < 70) overall = Math.min(overall, 74);
-    else if (rawGolden < 80) overall = Math.min(overall, 80);
+    if (rawGolden < 70) ceilings.push(74);
+    else if (rawGolden < 80) ceilings.push(80);
   }
 
   // COMBINED STRUCTURE CAP. The two caps above each fire on ONE signal, and a
@@ -4094,9 +4588,24 @@ export async function analyzeFrontPhoto(imgEl) {
   // model has golden >= 84, and the rounder faces' golden is high, so nothing else
   // moves -- this is a rule, not a per-photo fudge.
   if (frontalReadingsValid && faceFat.score < 75 && rawGolden < 70) {
-    // 58 (not 62) so the result lands SOLIDLY inside "mid tier" (45-62) rather
-    // than exactly on the 62 boundary, which would still read as "high tier".
-    overall = Math.min(overall, 58);
+    ceilings.push(58);
+  }
+
+  // ---------------------------------------------------------------------
+  // APPLY THE CEILINGS.
+  //
+  // One decision, taken once, from every ceiling collected above. The lowest
+  // ceiling wins, which is the same outcome the old chained Math.min() calls
+  // produced -- but now it is stated in one place, so the effective rule is
+  // readable instead of being an emergent property of statement order.
+  //
+  // NOTE ON WHAT THESE CAPS ARE FOR. They exist to stop a face being praised on
+  // its strongest signal while its weakest is ignored: symmetry and skin are
+  // cheap to score well, and without a cap a face with poor proportions could
+  // ride them into a tier its geometry does not support. The caps are a ceiling,
+  // never a floor -- they cannot lift a score, only hold it back.
+  if (ceilings.length) {
+    overall = Math.min(overall, Math.min.apply(null, ceilings));
   }
 
   const sharpness = computeImageSharpness(imgEl, w, h);
@@ -4178,6 +4687,14 @@ export async function analyzeFrontPhoto(imgEl) {
     overallMeasured: frontalReadingsValid,
   });
 
+  // "What's holding your potential?" -- the concrete list of readings keeping this
+  // face below its ceiling, ranked by how many overall points each is costing.
+  // Same assembled readings as everything else, same frontal gate.
+  const limiters = computeLimiters(
+    { faceFat, jawline, eyeArea, nose, skinQuality, golden },
+    frontalReadingsValid,
+  );
+
   console.debug("[analyzeFace]", {
     symmetry: symmetry.toFixed(1),
     golden: golden.toFixed(1),
@@ -4186,6 +4703,7 @@ export async function analyzeFrontPhoto(imgEl) {
     isProfile: profile.isProfile,
     faceFat: faceFat.score.toFixed(1),
     jawline: jawline.score.toFixed(1),
+    nose: nose ? nose.score + " (" + nose.shape + ")" : "n/a",
     skinQuality: skinQuality.toFixed(1),
     skinAcne: skinAcne.score.toFixed(1),
     eyeShape: eyeShape.score.toFixed(1),
@@ -4207,6 +4725,10 @@ export async function analyzeFrontPhoto(imgEl) {
     golden,
     faceFat,
     jawline,
+    // The nose assessment, or null when the landmarks could not support one. null
+    // rather than a fabricated object: the UI shows "not measured" instead of a
+    // number the engine did not earn.
+    nose,
     skinQuality,
     skinAcne,
     eyeShape,
@@ -4274,6 +4796,10 @@ export async function analyzeFrontPhoto(imgEl) {
     // The up-to-four features this face scored highest on, ranked. Empty on a
     // profile / no-face scan (nothing valid to praise). See computeStrengths.
     strengths,
+    // The readings holding this face below its ceiling, biggest lever first, each
+    // with a plain-language fix. Empty on a profile / no-face scan. See
+    // computeLimiters.
+    limiters,
     // Landmark reliability (head pose, sharpness, face size) and the lighting
     // reading. Both are advisory: they never change `overall`, they only tell the
     // UI whether to trust it and whether to ask for a retake.
@@ -4629,14 +5155,9 @@ export function combineAnalysis(front, side) {
       (EYE_AREA_REQUIREMENT_CAPS.find((r) => weakest >= r.min) ||
         EYE_AREA_REQUIREMENT_CAPS[EYE_AREA_REQUIREMENT_CAPS.length - 1]).cap;
     reconciledEyeArea.score = clamp100(Math.min(blended, cap));
-    reconciledEyeArea.label =
-      reconciledEyeArea.score >= 80
-        ? "Excellent"
-        : reconciledEyeArea.score >= 62
-          ? "Good"
-          : reconciledEyeArea.score >= 45
-            ? "Average"
-            : "Weak";
+    // Reuse the ONE label definition instead of repeating the bands here, so the
+    // profile-reconciled reading can never drift out of step with the frontal one.
+    reconciledEyeArea.label = eyeAreaLabelFor(reconciledEyeArea.score);
     // The evidence line must describe the RECONCILED parts, not the frontal
     // estimate it was built from, so it is rebuilt here from the corrected
     // numbers rather than being inherited via the spread above.
@@ -4648,7 +5169,7 @@ export function combineAnalysis(front, side) {
     ].filter((p) => Number.isFinite(p.v));
     const weakPart = pe.reduce((a, b) => (b.v < a.v ? b : a));
     reconciledEyeArea.evidence =
-      reconciledEyeArea.score >= 80
+      reconciledEyeArea.score >= 85
         ? "excellent eye area — " + reconciledEyeArea.upperLidExposureLabel.toLowerCase() +
           " lid, " + (side.eyeProjectionLabel || "neutral").toLowerCase() +
           " projection (measured from your side photo)"

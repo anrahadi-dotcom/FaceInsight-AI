@@ -342,6 +342,10 @@ button {
 
 .section-head h2 {
   margin-bottom: 0.5rem;
+  /* `balance` distributes the words evenly across lines instead of filling the
+     first line and stranding the last word on one of its own. "Which haircut
+     suits your face shape" left "shape" alone on line two without this. */
+  text-wrap: balance;
 }
 
 .section-head p {
@@ -2238,11 +2242,22 @@ button {
    evidence card gives the sentence room on one or two lines and makes every row
    of the grid close cleanly. */
 .scan-detail-card--wide {
-  grid-column: span 3;
+  /* SPAN 2, not 3, now that there are THREE wide cards.
+     The grid is 6 columns. With span 3, three wide cards tile as 3 + 3 + 3, which
+     leaves a two-card row and a stranded third card with three empty columns
+     beside it -- the exact "hole" the original span-2/span-3 split was designed
+     to avoid, back when there were only two wide cards.
+     At span 2 the three evidence cards sit side by side as one clean row of three,
+     directly under the 3 + 3 block of compact cards. 6*2 + 3*2 = 18 columns over
+     6 columns per row = exactly 3 full rows, with nothing left over. */
+  grid-column: span 2;
 }
 
 .scan-detail-card--wide .scan-why {
-  max-width: 78ch;
+  /* Narrower than the 78ch a two-up row allowed: three across means each card is
+     a third of the row, so the text has to read well in that measure. */
+  max-width: 46ch;
+  text-align: left;
 }
 
 .scan-why--eye {
@@ -2838,6 +2853,136 @@ button {
   color: var(--dim);
   font-size: 0.78rem;
   line-height: 1.55;
+}
+
+/* -------------------------------------------------------- scan haircuts */
+/* The hairstyle advice that used to be a separate section, now rendered inside
+   the scan result above Scan reliability. Styled to match .scan-quality so the
+   two read as siblings in the same report. */
+.scan-hair {
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-alt));
+  text-align: left;
+}
+
+.scan-hair.hidden {
+  display: none;
+}
+
+.scan-hair__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.scan-hair__head h4 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scan-hair__shape {
+  padding: 0.2rem 0.7rem;
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 999px;
+  color: var(--neon);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.scan-hair__summary {
+  margin: 0 0 0.35rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.scan-hair__avoid {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Length preference row. A segmented control so the current choice is obvious and
+   switching is one tap -- the whole point is that a user who will not go short
+   can still get advice, instantly, without redoing the scan. */
+.scan-hair__length {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.9rem;
+}
+
+.scan-hair__length-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scan-hair__length-btns {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.scan-hair__len-btn {
+  padding: 0.28rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease),
+    color 0.2s var(--ease), transform 0.12s var(--ease);
+}
+
+.scan-hair__len-btn:hover {
+  border-color: rgba(6, 182, 212, 0.45);
+  color: var(--text);
+}
+
+.scan-hair__len-btn:active {
+  transform: scale(0.95);
+}
+
+.scan-hair__len-btn:focus-visible {
+  outline: 2px solid rgba(0, 240, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.scan-hair__len-btn.is-active {
+  border-color: rgba(0, 240, 255, 0.7);
+  background: rgba(6, 182, 212, 0.16);
+  color: var(--neon);
+}
+
+/* The hint makes it obvious the pills are controls, not labels. */
+.scan-hair__length-hint {
+  color: var(--dim);
+  font-size: 0.68rem;
+  font-style: italic;
+}
+
+.scan-hair__disclaimer {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 /* -------------------------------------------------------- scan reliability */
@@ -3697,8 +3842,11 @@ button {
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
+  /* Smoother entrance: less travel (24 -> 14px) and a whisper of scale, so the
+     card eases into place rather than sliding a long way. The big 24px move read
+     as a jump on short cards; 14px + 0.99->1 scale reads as a settle. */
+  from { opacity: 0; transform: translateY(14px) scale(0.992); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes previewIn {
@@ -4166,6 +4314,66 @@ body:not(.no-js) [data-reveal].is-revealed {
   transition-duration: 0.7s;
 }
 
+/* --- 19.8b Smoothness pass (the "make it feel smoother" request) ---------- */
+/* The reveal/entrance animations already existed; this layer makes them FEEL
+   smoother without changing what they do:
+     * a longer, softer easing curve on the big reveal and the scan results, so
+       they ease out instead of stopping abruptly;
+     * a staggered entrance for the scan-result cards, so the report assembles in
+       a wave rather than all at once (the single biggest perceived-smoothness
+       win in the whole app);
+     * GPU hints on the elements that animate transform/opacity, so the browser
+       composites them instead of repainting. */
+:root {
+  /* A gentler ease-out for entrance motion. Slower tail than --ease, which suits
+     entrances (they should settle) rather than hovers (which should feel crisp). */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body:not(.no-js) [data-reveal] {
+  transition-timing-function: var(--ease-out-soft);
+}
+
+/* The report assembles as a staggered wave. Each direct child of the results
+   stack gets a small extra delay; the delay is tiny (60ms) so the whole report
+   still lands within ~0.6s and never feels slow. `backwards` fill keeps a card
+   hidden until its own delay starts, so nothing pops in early.
+
+   ONLY the children animate -- an earlier pass also put a fadeUp on the parent
+   .scan-results, which stacked two animations on the same pixels and made the
+   entrance stutter. Staggering the children alone is both smoother and lighter. */
+.scan-results.is-visible > * {
+  animation: fadeUp 0.6s var(--ease-out-soft) backwards;
+}
+.scan-results.is-visible > *:nth-child(1) { animation-delay: 0.02s; }
+.scan-results.is-visible > *:nth-child(2) { animation-delay: 0.08s; }
+.scan-results.is-visible > *:nth-child(3) { animation-delay: 0.14s; }
+.scan-results.is-visible > *:nth-child(4) { animation-delay: 0.2s; }
+.scan-results.is-visible > *:nth-child(5) { animation-delay: 0.26s; }
+.scan-results.is-visible > *:nth-child(6) { animation-delay: 0.32s; }
+.scan-results.is-visible > *:nth-child(n + 7) { animation-delay: 0.38s; }
+
+/* GPU hints for transform/opacity animation. Only the elements that actually
+   animate get the hint, and it is dropped once the entrance is done -- holding
+   will-change forever would keep layers alive for no reason. */
+.scan-results.is-visible > *,
+[data-reveal],
+.hair-cut,
+.scan-limit-item,
+.scan-strength-item {
+  will-change: transform, opacity;
+}
+
+/* A calm, consistent transition baseline for interactive surfaces that did not
+   declare one, so hovers/active states ease rather than snap. */
+.btn,
+.nav-link,
+.faq-question,
+.scan-eye-item,
+.scan-quality-item {
+  transition-timing-function: var(--ease);
+}
+
 /* --- 19.9 Focus-visible: a consistent, obvious focus ring --------------- */
 /* Accessibility first: every interactive element gets a clear neon-cyan focus
    ring instead of relying on the browser default (which the dark theme
@@ -4210,6 +4418,12 @@ label:focus-visible {
   .upload-box:focus-visible,
   .feature-card:hover {
     transform: none;
+  }
+
+  /* Kill the staggered wave and the GPU hints under reduced-motion. */
+  .scan-results.is-visible > * {
+    animation: none;
+    will-change: auto;
   }
 }
 /* ==========================================================================
@@ -4626,6 +4840,176 @@ label:focus-visible {
   line-height: 1.45;
 }
 
+/* =============================== What's holding your potential =============
+   A sibling of the strengths card, but framed as work-to-do, so it carries an
+   AMBER accent (the palette's caution colour) instead of the strengths' indigo.
+   Same structure so the two read as one family, different colour so the meaning
+   is obvious at a glance. */
+.scan-limits {
+  position: relative;
+  margin-top: 1.1rem;
+  padding: 1.35rem 1.35rem 1.35rem 1.6rem;
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(420px 200px at 85% -20%, rgba(245, 158, 11, 0.14), transparent 70%),
+    linear-gradient(180deg, rgba(245, 158, 11, 0.07), rgba(245, 158, 11, 0.015));
+  overflow: hidden;
+  animation: scanLimitIn 0.5s var(--ease) both;
+}
+
+.scan-limits.hidden {
+  display: none;
+}
+
+.scan-limits::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--amber, #f59e0b), #ef4444);
+}
+
+.scan-limits__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.scan-limits__head h4 {
+  margin: 0;
+  color: var(--amber, #f59e0b);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scan-limits__count {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: var(--amber, #f59e0b);
+  background: rgba(245, 158, 11, 0.12);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scan-limits__lead {
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.scan-limits__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.scan-limit-item {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--line);
+  animation: scanLimitIn 0.45s var(--ease) both;
+  transition: border-color 0.3s var(--ease), background 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.scan-limit-item:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.08);
+  transform: translateX(3px);
+}
+
+.scan-limit-item__rank {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2a1a04;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+
+.scan-limit-item__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.scan-limit-item__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.scan-limit-item__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.scan-limit-item__score {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--amber, #f59e0b);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.scan-limit-item__bar {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.scan-limit-item__bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  transition: width 0.9s var(--ease);
+}
+
+.scan-limit-item__fix {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+@keyframes scanLimitIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ------------------------------------------- 20.4 Responsive: stack the pair */
 /* Below the tablet breakpoint the two cards are too narrow side by side, so
    they stack -- Strengths first, since a face's strengths are the more
@@ -4646,6 +5030,16 @@ label:focus-visible {
   .photo-scan-overlay .scan-line,
   .photo-scan-readout__dot {
     animation: none;
+  }
+
+  .scan-limits,
+  .scan-limit-item {
+    animation: none;
+  }
+
+  .scan-limit-item__bar i,
+  .scan-strength-item__bar i {
+    transition: none;
   }
 }
 /* ==========================================================================
@@ -4778,5 +5172,290 @@ label:focus-visible {
   }
   .marquee:hover .marquee__track {
     animation-play-state: running;
+  }
+}
+/* ==========================================================================
+   24. Print / PDF export
+   --------------------------------------------------------------------------
+   The "Download PDF" button builds a report block from what is on screen and
+   calls the browser's print dialog. Everything outside that block is hidden when
+   body.printing-report is set, so the user gets a clean document instead of the
+   whole dark-themed page on paper.
+
+   Print is a light surface on purpose: the site's dark navy would either be
+   dropped by the browser anyway or bleed ink, and a report is meant to be read
+   and annotated.
+   ========================================================================== */
+
+/* Off-screen in normal use, so the block only exists for the print pass. */
+.print-report {
+  display: none;
+}
+
+@media print {
+  /* Hide the entire app; the report block is the only thing that prints. */
+  body.printing-report > *:not(.print-report) {
+    display: none !important;
+  }
+
+  body.printing-report .print-report {
+    display: block;
+  }
+
+  /* Light, ink-friendly output regardless of the on-screen theme. */
+  body.printing-report {
+    background: #fff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body.printing-report::before,
+  body.printing-report::after {
+    display: none !important;
+  }
+
+  .print-report {
+    max-width: 100%;
+    padding: 0;
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #111827;
+  }
+
+  .print-head {
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.1rem;
+    border-bottom: 2px solid #0f172a;
+  }
+
+  .print-report h1 {
+    margin: 0 0 0.15rem;
+    font-size: 17pt;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+  }
+
+  .print-meta {
+    margin: 0;
+    font-size: 9pt;
+    color: #6b7280;
+  }
+
+  .print-block {
+    margin-bottom: 1.1rem;
+    /* Keep a heading with at least the start of its content. */
+    break-inside: avoid;
+  }
+
+  .print-block h2 {
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.2rem;
+    border-bottom: 1px solid #d1d5db;
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  /* Two-column definition list: label left, value right, dotted leader. A plain
+     table would be heavier and harder to keep on one page. */
+  .print-dl {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.28rem 1.5rem;
+    margin: 0;
+  }
+
+  .print-dl dt {
+    color: #374151;
+    border-bottom: 1px dotted #d1d5db;
+  }
+
+  .print-dl dd {
+    margin: 0;
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .print-text {
+    margin: 0.5rem 0 0;
+    color: #374151;
+  }
+
+  .print-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    list-style: disc;
+  }
+
+  .print-list li {
+    margin-bottom: 0.28rem;
+  }
+
+  .print-list--tips {
+    /* Numbered, because the grooming plan is a sequence to work through. */
+    list-style: decimal;
+  }
+
+  .print-disclaimer {
+    margin-top: 1.4rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid #d1d5db;
+    font-size: 8.5pt;
+    line-height: 1.45;
+    color: #6b7280;
+  }
+}
+
+/* On screen the print block must never be visible, even mid-transition. */
+body:not(.printing-report) .print-report {
+  display: none;
+}
+
+/* --- the download button -------------------------------------------------- */
+.verdict__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.verdict__download {
+  border-color: rgba(6, 182, 212, 0.4);
+  color: var(--cyan);
+}
+
+.verdict__download:hover {
+  background: rgba(6, 182, 212, 0.14);
+  border-color: rgba(0, 240, 255, 0.7);
+  color: var(--neon);
+}
+
+/* The button is pointless before a scan has produced a report. */
+#scanResults.hidden .verdict__download,
+.scan-results.hidden .verdict__download {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .verdict__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  .verdict__head-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .verdict__download {
+    width: 100%;
+    justify-content: center;
+  }
+}
+/* ==========================================================================
+   25. Connectivity strip
+   --------------------------------------------------------------------------
+   Shown under the header ONLY when the browser reports that the network is gone.
+   It exists because of a real report: "I turned off WiFi and there was no error."
+   There was no error for a good reason -- the model was already cached, so the
+   scan genuinely still worked. The app should say so, rather than leaving the
+   user to guess whether the offline handling is broken or simply unnecessary.
+
+   Two tones:
+     .is-warn  offline AND no cached model -> scanning will fail
+     (default) offline but model cached   -> scanning still works
+
+   It is purely informational and never disables a control.
+   ========================================================================== */
+
+.conn-strip {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* Sits directly under the fixed header, and under the boot alert when that is
+     showing (the body padding from the boot guard moves this with it). */
+  top: calc(var(--header-h) + var(--boot-alert-h, 0px));
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(6, 182, 212, 0.4);
+  background: linear-gradient(180deg, rgba(8, 47, 73, 0.97), rgba(11, 18, 32, 0.97));
+  color: #a5f3fc;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: opacity 0.25s var(--ease), transform 0.3s var(--ease);
+}
+
+.conn-strip[hidden] {
+  display: none;
+}
+
+.conn-strip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.conn-strip .conn-strip__icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: var(--cyan);
+}
+
+.conn-strip__text {
+  max-width: 72ch;
+}
+
+/* Unavailable: the model is not cached, so this is a caution rather than a
+   status note. Amber, matching every other "cannot read this input" message. */
+.conn-strip.is-warn {
+  border-bottom-color: rgba(245, 158, 11, 0.5);
+  background: linear-gradient(180deg, rgba(69, 46, 5, 0.97), rgba(27, 19, 5, 0.97));
+  color: #fde68a;
+}
+
+.conn-strip.is-warn .conn-strip__icon {
+  color: var(--amber);
+}
+
+/* The page content starts below the header, so a visible strip would overlap the
+   top of the hero. Push the main content down while it is showing. */
+body.has-conn-strip main {
+  padding-top: 2.4rem;
+}
+
+@media (max-width: 620px) {
+  .conn-strip {
+    font-size: 0.76rem;
+    padding: 0.55rem 0.8rem;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  body.has-conn-strip main {
+    padding-top: 3.2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conn-strip {
+    transition: none;
   }
 }

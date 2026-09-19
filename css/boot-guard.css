@@ -1,0 +1,168 @@
+/* ==========================================================================
+   23. Boot alert
+   --------------------------------------------------------------------------
+   The banner js/boot-guard.js shows when the page cannot run its own code --
+   most often because index.html was opened from disk instead of served.
+
+   It is amber, not coral: nothing is broken and no data is lost, the page just
+   needs to be opened a different way. Coral stays reserved for real failures.
+
+   Fixed to the top and above the header (z-index over .site-header's 100) so it
+   cannot be missed and cannot be scrolled past.
+   ========================================================================== */
+
+.boot-alert {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  max-height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 3rem 0.9rem 1.1rem;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.5);
+  background: linear-gradient(180deg, #241a06, #1b1305);
+  color: #fde68a;
+  box-shadow: 0 10px 34px rgba(2, 6, 23, 0.65);
+  opacity: 0;
+  transform: translateY(-100%);
+  transition:
+    opacity 0.25s var(--ease),
+    transform 0.32s var(--ease);
+}
+
+.boot-alert.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.boot-alert.is-leaving {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+.boot-alert__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1.5px solid var(--amber);
+  color: var(--amber);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.boot-alert__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.boot-alert__title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff7ed;
+  margin-bottom: 0.2rem;
+}
+
+.boot-alert__text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  max-width: 82ch;
+}
+
+.boot-alert__commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.boot-alert__commands code {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.55);
+  color: #fcd34d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.boot-alert__note {
+  margin: 0.55rem 0 0;
+  color: #d6c9a3;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-width: 82ch;
+}
+
+.boot-alert__close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 9px;
+  background: rgba(2, 6, 23, 0.4);
+  color: #fcd34d;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.25s var(--ease),
+    border-color 0.25s var(--ease);
+}
+
+.boot-alert__close:hover {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.7);
+}
+
+/* The banner is fixed over the top of the page. Two consequences to handle:
+
+   1. It would sit ON TOP of the fixed header, so the nav could not be clicked
+      while it was showing. The header is pushed down by the banner's height
+      instead, using the --boot-alert-h custom property the script sets from the
+      banner's measured height (a hard-coded value would be wrong the moment the
+      copy wraps to a different number of lines).
+
+   2. The page content beneath also has to clear the banner, or the hero's pill
+      is hidden behind it on load. */
+body.has-boot-alert .site-header {
+  top: var(--boot-alert-h, 0px);
+}
+
+body.has-boot-alert {
+  padding-top: var(--boot-alert-h, 0px);
+}
+
+@media (max-width: 620px) {
+  .boot-alert {
+    padding: 0.75rem 2.6rem 0.75rem 0.85rem;
+  }
+  .boot-alert__title {
+    font-size: 0.88rem;
+  }
+  .boot-alert__text,
+  .boot-alert__note {
+    font-size: 0.78rem;
+  }
+  .boot-alert__commands code {
+    font-size: 0.72rem;
+  }
+}

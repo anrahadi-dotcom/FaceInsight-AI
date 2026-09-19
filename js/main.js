@@ -5,14 +5,18 @@ import {
   tierFor,
   tiersFor,
   ModelLoadError,
+  clearNasolabialAngleFromSide,
 } from "./faceEngine.js";
 import { createScale, setScaleValue, renderTicks } from "./scale.js";
 import { tipsForAnalysis, tipsHeadingFor } from "./tips.js";
 import { initUI, showToast } from "./ui/index.js";
-// Self-contained section controller. Imported for its side effect: it wires its
-// own listeners and shares no state with the scanner below. Safe to keep if the
-// section is ever removed -- it no-ops when its elements are absent.
-import "./hairstyle-ui.js";
+import { printScanReport } from "./report-export.js";
+import { onConnectionChange, connectionNotice } from "./connectivity.js";
+// Hairstyle advice, now rendered INSIDE the scan result from the scan's own
+// analysis (no second upload, no second model run). renderHairPlan(analysis) fills
+// the #scanHairPanel placed above Scan reliability; it is a no-op if that panel is
+// absent, so this import is safe.
+import { renderHairPlan } from "./hairstyle-ui.js";
 
 // Initialize UI chrome (nav sticky/drawer, reveal animations, stat counters, FAQ
 // accordion, card spotlight, footer year). This runs EXACTLY ONCE.
@@ -96,6 +100,9 @@ const scanSkinAcneEl = document.getElementById("scanSkinAcne");
 const scanFaceFatEl = document.getElementById("scanFaceFat");
 const scanJawlineEl = document.getElementById("scanJawline");
 const scanEyeShapeEl = document.getElementById("scanEyeShape");
+// Nose: the score cell plus the shape name beneath it.
+const scanNoseEl = document.getElementById("scanNose");
+const scanNoseShapeEl = document.getElementById("scanNoseShape");
 const scanProfileEl = document.getElementById("scanProfile");
 const scanTierValueEl = document.getElementById("scanTier");
 
@@ -146,6 +153,11 @@ const scanStrengthListEl = document.getElementById("scanStrengthList");
 const scanStrengthCountEl = document.getElementById("scanStrengthCount");
 const scanStrengthPanel = document.getElementById("scanStrengthPanel");
 
+// What's holding your potential (below the potential/strengths pair)
+const scanLimitsPanel = document.getElementById("scanLimitsPanel");
+const scanLimitsListEl = document.getElementById("scanLimitsList");
+const scanLimitsCountEl = document.getElementById("scanLimitsCount");
+
 // Scan reliability
 const scanReliabilityBadge = document.getElementById("scanReliabilityBadge");
 const scanConfidenceEl = document.getElementById("scanConfidence");
@@ -193,6 +205,41 @@ if (goldenScaleEl) {
   });
   scanGoldenMarker = scaleObj.marker;
 }
+
+// ------------------------------------------------------------------ Connectivity strip
+//
+// A slim strip that appears only when the browser goes offline, saying which
+// mode the app is in. Without it, a user who pulls the plug and runs a scan that
+// SUCCEEDS (model served from cache) sees nothing change and assumes the offline
+// handling is missing. The strip is what makes that case legible.
+//
+// It never blocks a scan: it reports, it does not prevent. Blocking a scan that
+// would have worked is a worse failure than letting one run.
+(function initConnectivityStrip() {
+  const strip = document.getElementById("connectivityStrip");
+  if (!strip) return;
+
+  const textEl = strip.querySelector(".conn-strip__text");
+
+  onConnectionChange(function (state) {
+    const notice = connectionNotice(state);
+    if (!notice) {
+      strip.classList.remove("is-visible", "is-warn");
+      document.body.classList.remove("has-conn-strip");
+      window.setTimeout(() => {
+        if (!strip.classList.contains("is-visible")) strip.hidden = true;
+      }, 250);
+      return;
+    }
+
+    if (textEl) textEl.textContent = notice.text;
+    strip.hidden = false;
+    strip.classList.toggle("is-warn", notice.tone === "warn");
+    document.body.classList.add("has-conn-strip");
+    // Next frame so the entrance transition runs.
+    window.requestAnimationFrame(() => strip.classList.add("is-visible"));
+  });
+})();
 
 // ------------------------------------------------------------------ Image Preview & Upload
 
@@ -821,6 +868,11 @@ if (analyzeBtn) {
 
     try {
       try {
+        // Clear the parked side-profile angle FIRST. Without this, a scan that
+        // used a side photo leaves its nasolabial angle behind, and the next
+        // front-only scan folds that stale reading into its nose score -- a
+        // measurement taken from a photo this report knows nothing about.
+        clearNasolabialAngleFromSide();
         analysis = await withTimeout(
           analyzeFrontPhoto(preview),
           MODEL_CALL_TIMEOUT_MS,
@@ -1271,6 +1323,44 @@ if (analyzeBtn) {
             ? analysis.eyeShape.label + " (" + analysis.eyeShape.score.toFixed(0) + "%)"
             : "n/a (profile)";
         }
+        // Nose. The cell shows SCORE + TIER (the band is what the number means),
+        // and the line beneath names the shape, which is the reason for the band.
+        //
+        // When the assessment is null the cell says so rather than showing a dash:
+        // "not measured" is a real answer and a bare "--" reads as a bug.
+        if (scanNoseEl) {
+          const nose = analysis.nose;
+          if (!frontalMeasured) {
+            scanNoseEl.textContent = "n/a (profile)";
+            if (scanNoseShapeEl) scanNoseShapeEl.textContent = "";
+          } else if (!nose) {
+            scanNoseEl.textContent = "Not measured";
+            if (scanNoseShapeEl) {
+              scanNoseShapeEl.textContent =
+                "The mesh could not measure a nose on this photo.";
+            }
+          } else {
+            // Score only in the value cell. Appending the tier label here wrapped
+            // to two lines in a third-width card, making this card taller than its
+            // neighbours and breaking the row's baseline -- the tier belongs with
+            // the shape text, which already wraps to multiple lines by design.
+            scanNoseEl.textContent = nose.score + " / 100";
+            if (scanNoseShapeEl) {
+              // Name the shape, and state what it was measured from -- a score
+              // from a front photo alone rests on fewer readings than one that
+              // also had a profile, and the user can see which they got.
+              scanNoseShapeEl.textContent =
+                nose.tierLabel +
+                " \u00B7 " +
+                nose.shape +
+                " \u2014 " +
+                nose.evidence +
+                " (" +
+                nose.measuredOn +
+                ")";
+            }
+          }
+        }
         // The old "Head angle" row reported whether the front photo was taken from
         // the side. That can no longer happen (profiles go in slot 2), so the row
         // now reports how ON-AXIS the front photo was -- the thing that actually
@@ -1439,11 +1529,14 @@ if (analyzeBtn) {
           // explains that the remaining limit is structural.
           const atCeiling = potential.headroom < 1.5;
           if (scanPotentialScoreEl) {
-            // At the ceiling "+0.0" is a hang-on-I-didn't-say-recoverable! So the
-            // big number becomes "MAX" -- it says where the face IS rather than
-            // showing a movement of zero, which reads like a broken calculation.
+            // NOT "MAX". The reported bug was that this badge read "MAX" on almost
+            // every scan, which was true in the arithmetic (headroom was ~0 for
+            // nearly everyone) but wrong as a claim -- a face can be at its OWN
+            // ceiling while sitting at 92 of 100, and "MAX" asserts the top of the
+            // whole scale. The badge now shows the CEILING VALUE ("92 of 96"),
+            // which states where the face can actually reach without overclaiming.
             scanPotentialScoreEl.textContent = atCeiling
-              ? "MAX"
+              ? Math.round(potential.score) + " of " + Math.round(potential.structureCeiling)
               : "+" + potential.headroom.toFixed(1);
           }
           if (scanPotentialTierEl) {
@@ -1468,15 +1561,16 @@ if (analyzeBtn) {
               posture: "posture",
             }[potential.priority] || "your weakest area";
             // No meaningful headroom: the projection equals where the face already
-            // is. Printing the same number twice under a "potential" heading reads
-            // as a bug, so this case says what it MEANS instead -- the face is at
-            // its structural max and the remaining lever is maintenance, not
-            // gain. The score itself is hidden in this case (see below).
+            // is. This is NOT "everything maxed" -- it means the soft-tissue
+            // readings (skin, leanness, jaw) are already at target, so the only
+            // thing left is bone structure, which habits cannot move. The note says
+            // exactly that, and names the one part (usually eye area) that still
+            // reads below the best it could be.
             if (potential.headroom < 1.5) {
               scanPotentialNoteEl.textContent =
-                "At your structural ceiling — your bone geometry is the limit now, not your habits. " +
-                "Skin, leanness and jaw definition are all already at or above target, so there is " +
-                "nothing left to recover here. Maintenance is the win.";
+                "Your improvable readings (skin, leanness, jaw definition) are already at " +
+                "target, so there is no quick gain left to promise. The remaining limit is bone " +
+                "structure. Weakest part to watch: " + priorityLabel + ".";
             } else if (potential.tierUp) {
               scanPotentialNoteEl.textContent =
                 "+" + potential.headroom.toFixed(1) + " points of real headroom — within reach of " +
@@ -1548,6 +1642,65 @@ if (analyzeBtn) {
             li.appendChild(rank);
             li.appendChild(body);
             scanStrengthListEl.appendChild(li);
+          });
+        }
+
+        // "What's holding your potential?" -- the concrete list of readings keeping
+        // this face below its ceiling, biggest lever first, each with a fix line.
+        // The panel hides itself when nothing is limiting (an already-elite face),
+        // so it never shows an empty shell.
+        const limiters = Array.isArray(analysis.limiters) ? analysis.limiters : [];
+        if (scanLimitsPanel) {
+          scanLimitsPanel.classList.toggle("hidden", limiters.length === 0);
+        }
+        if (scanLimitsCountEl) {
+          scanLimitsCountEl.textContent = limiters.length
+            ? limiters.length + (limiters.length === 1 ? " limiter" : " limiters")
+            : "--";
+        }
+        if (scanLimitsListEl) {
+          scanLimitsListEl.innerHTML = "";
+          limiters.forEach(function (l, i) {
+            const li = document.createElement("li");
+            li.className = "scan-limit-item";
+
+            const rank = document.createElement("span");
+            rank.className = "scan-limit-item__rank";
+            rank.textContent = String(i + 1);
+
+            const body = document.createElement("div");
+            body.className = "scan-limit-item__body";
+
+            const head = document.createElement("div");
+            head.className = "scan-limit-item__head";
+            const name = document.createElement("span");
+            name.className = "scan-limit-item__name";
+            name.textContent = l.label || l.key;
+            const score = document.createElement("span");
+            score.className = "scan-limit-item__score";
+            // Show the reading and how far below target it sits, so the number has
+            // a direction: "72/100 · 20 below target" reads as a gap to close.
+            score.textContent = l.score + "/100 · " + l.gap + " below";
+            head.appendChild(name);
+            head.appendChild(score);
+
+            const bar = document.createElement("span");
+            bar.className = "scan-limit-item__bar";
+            const fill = document.createElement("i");
+            fill.style.width = Math.max(0, Math.min(100, l.score)) + "%";
+            bar.appendChild(fill);
+
+            const fix = document.createElement("p");
+            fix.className = "scan-limit-item__fix";
+            fix.textContent = l.fix || "";
+
+            body.appendChild(head);
+            body.appendChild(bar);
+            if (l.fix) body.appendChild(fix);
+            li.appendChild(rank);
+            li.appendChild(body);
+            li.style.animationDelay = i * 70 + "ms";
+            scanLimitsListEl.appendChild(li);
           });
         }
 
@@ -1772,6 +1925,11 @@ if (analyzeBtn) {
         if (scanSymmetryMarker && frontalMeasured) setScaleValue(scanSymmetryMarker, analysis.symmetry);
         if (scanGoldenMarker && frontalMeasured) setScaleValue(scanGoldenMarker, analysis.golden);
 
+        // Haircuts for this face, from the SAME analysis -- rendered into the
+        // #scanHairPanel that sits above Scan reliability. No second photo, no
+        // second model run. Hidden automatically when the shape can't be measured.
+        renderHairPlan(analysis);
+
         if (scanTipsHeadingEl) scanTipsHeadingEl.textContent = tipsHeadingFor(analysis.tierGroup);
         if (scanTipsListEl) {
           scanTipsListEl.innerHTML = "";
@@ -1806,6 +1964,22 @@ if (analyzeBtn) {
 }
 
 // ------------------------------------------------------------------ Report Section & Rows
+
+// "Download PDF" on the verdict card. The browser's own print dialog is the PDF
+// engine (see js/report-export.js for why), so this just validates that there is
+// a report to print and hands off.
+(function initReportDownload() {
+  const btn = document.getElementById("downloadReportBtn");
+  if (!btn) return;
+  btn.addEventListener("click", function () {
+    const started = printScanReport();
+    if (!started) {
+      showToast("Run a scan first \u2014 there is no report to export yet", "info");
+      return;
+    }
+    showToast("Choose \"Save as PDF\" in the print dialog", "info");
+  });
+})();
 
 function initReportSection() {
   const reportSection = document.getElementById("report");

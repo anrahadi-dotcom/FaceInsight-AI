@@ -19,7 +19,7 @@ Banyak aplikasi analisis wajah meminta kita mengunggah foto ke server orang lain
 
 - **Scan wajah 478 titik.** Dipetakan otomatis dengan MediaPipe FaceLandmarker dari Google.
 - **10 aspek penilaian.** Simetri, golden ratio, bentuk wajah, canthal tilt, harmoni wajah, kualitas kulit, kejernihan kulit, bentuk mata, face fat, dan garis rahang.
-- **Analisis area mata yang dirinci.** Skornya tidak cuma satu angka. Kamu bisa lihat bobot tiap bagian (canthal tilt 30%, proyeksi mata 25%, kelopak 25%, alis dan jarak antarmata 20%), jadi jelas bagian mana yang menaikkan atau menurunkan skor.
+- **Analisis area mata yang dirinci.** Skornya tidak cuma satu angka. Kamu bisa lihat bobot tiap bagian (canthal tilt 32%, proyeksi mata 25%, kelopak 28%, alis dan jarak antarmata 15%), jadi jelas bagian mana yang menaikkan atau menurunkan skor.
 - **Analisis foto samping (opsional).** Tambahkan foto profil untuk membuka laporan sudut rahang (gonial), ramus, mandibula, proyeksi mata, hidung, dan garis profil.
 - **Cek kelayakan foto.** Web mengecek kepercayaan deteksi, pencahayaan, ketajaman, dan arah kepala. Kalau fotonya kurang bagus, kamu diberi tahu, bukan dikasih skor asal-asalan.
 - **Potensi dan kekuatan.** Menunjukkan aspek mana yang masih bisa diperbaiki (kulit, lemak wajah, definisi rahang, kelopak mata) dan empat fitur terkuat di wajahmu.
